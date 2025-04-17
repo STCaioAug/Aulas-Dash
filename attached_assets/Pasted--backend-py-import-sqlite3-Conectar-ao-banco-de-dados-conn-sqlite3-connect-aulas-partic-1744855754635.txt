@@ -1,0 +1,89 @@
+# backend.py
+
+import sqlite3
+
+# Conectar ao banco de dados
+conn = sqlite3.connect("aulas_particulares.db")
+cursor = conn.cursor()
+
+# Lista de responsáveis (nome, telefone, link WhatsApp)
+responsaveis = [
+    ("Daniella Risola", "+55 19 98224-4747", "https://wa.me/5519982244747"),
+    ("Marcela", "+55 19 98911-3534", "https://wa.me/5519989113534"),
+    ("Maysa", "+55 19 99891-6701", "https://wa.me/5519998916701"),
+    ("Karin", "+55 11 97626-9474", "https://wa.me/5511976269474"),
+    ("Giovanela", "+55 19 98186-7873", "https://wa.me/5519981867873"),
+    ("Mariana", "+55 19 99130-8899", "https://wa.me/5519991308899"),
+    ("Silvia", "+55 19 99602-8813", "https://wa.me/5519996028813"),
+    ("Gisele", "+55 19 99928-4241", "https://wa.me/5519999284241"),
+    ("Márcia", "+55 19 99603-7665", "https://wa.me/5519996037665"),
+    ("Jacqueline Polisel", "+55 19 97402-9787", "https://wa.me/5519974029787"),
+    ("Leandro", "+55 11 97679-6336", "https://wa.me/5511976796336")
+]
+
+# Criar tabela de responsáveis
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS responsaveis (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        telefone TEXT,
+        whatsapp TEXT
+    );
+''')
+
+# Criar tabela de alunos com relacionamento
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS alunos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        responsavel_id INTEGER,
+        FOREIGN KEY (responsavel_id) REFERENCES responsaveis (id)
+    );
+''')
+
+# Inserir responsáveis
+cursor.executemany("INSERT INTO responsaveis (nome, telefone, whatsapp) VALUES (?, ?, ?);", responsaveis)
+
+# Buscar IDs dos responsáveis
+cursor.execute("SELECT nome, id FROM responsaveis")
+mapa_responsaveis = {nome: id for nome, id in cursor.fetchall()}
+
+# Lista de alunos com os nomes dos responsáveis
+relacao_aluno_responsavel = [
+    ("Maria", "Giovanela"),
+    ("João", "Mariana"),
+    ("Pedro", "Daniella Risola"),
+    ("Lourenço", "Maysa"),
+    ("Gabi", "Silvia"),
+    ("Otávio", "Gisele"),
+    ("Pietro", "Marcela"),
+    ("Carol", "Daniella Risola"),
+    ("Gui/Pedrão", "Karin"),
+    ("Gui/Pedrão", "Leandro"),
+    ("Antônio", "Giovanela"),
+    ("Fê", "Giovanela"),
+    ("Maria", "Giovanela"),
+    ("João", "Mariana"),
+    ("Pedro", "Daniella Risola"),
+    ("Lourenço", "Maysa"),
+    ("Gabi", "Silvia"),
+    ("Otávio", "Gisele"),
+    ("Pietro", "Marcela"),
+    ("Carol", "Daniella Risola"),
+    ("Gui/Pedrão", "Karin"),
+    ("Gui/Pedrão", "Leandro"),
+    ("Antônio", "Giovanela"),
+    ("Fê", "Giovanela")
+]
+
+# Inserir alunos com mapeamento do nome do responsável para ID
+for aluno, responsavel_nome in relacao_aluno_responsavel:
+    responsavel_id = mapa_responsaveis.get(responsavel_nome)
+    if responsavel_id:
+        cursor.execute("INSERT INTO alunos (nome, responsavel_id) VALUES (?, ?)", (aluno, responsavel_id))
+
+# Salvar e fechar
+conn.commit()
+conn.close()
+
+print("Responsáveis e alunos cadastrados com sucesso!")

@@ -29,7 +29,15 @@
                         <td>{{ guardian.name }}</td>
                         <td>{{ guardian.email if guardian.email else '-' }}</td>
                         <td>{{ guardian.phone if guardian.phone else '-' }}</td>
-                        <td>{{ guardian.whatsapp if guardian.whatsapp else '-' }}</td>
+                        <td>
+                            {% if guardian.whatsapp %}
+                            <a href="{{ guardian.whatsapp }}" target="_blank" class="btn btn-success btn-sm">
+                                <i class="fab fa-whatsapp"></i> WhatsApp
+                            </a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
                         <td>
                             {% if guardian.primary_students %}
                             <ul class="list-unstyled mb-0">
