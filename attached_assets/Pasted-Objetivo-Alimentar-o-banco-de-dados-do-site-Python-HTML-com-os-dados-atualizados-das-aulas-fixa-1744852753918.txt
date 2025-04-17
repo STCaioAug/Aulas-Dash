@@ -1,0 +1,73 @@
+Objetivo: Alimentar o banco de dados do site (Python + HTML) com os dados atualizados das aulas fixas, aulas extras, feriados, pendências e observações organizadas abaixo. Não alterar estrutura do site, apenas adicionar essas informações no backend de forma organizada e consultável.
+
+====================
+🔁 AULAS FIXAS – 2025
+====================
+
+[segunda]
+- Maria (Giovanella) | 15:00-16:30 | Apto 111 Torre 1
+- João (Apto 91 Torre 2) | 16:40-17:40
+
+[terça]
+- Lourenço (Maysa) | 15:30-17:00
+- Gabi Selencio (Silvia) | 17:00-18:00
+
+[quarta]
+- Lorenzo (Márcia Maciel) | 14:30-15:30
+- Otávio (Filho da Gisele) | 15:30-17:00
+- Pietro (Marcela) | 17:30-19:00
+
+[quinta]
+- Pedro (Dani) | 15:00-16:00
+- Carol (Dani) | 16:00-17:00
+
+[sexta]
+- Lourenço (Maysa) | 14:30-16:00
+- Gui/Pedrão (Karin) | 16:00-17:30
+
+[sábado]
+- João Paulo | 08:30-09:30 | Aula de Inglês
+
+=======================
+📅 AULAS EXTRAS AGENDADAS
+=======================
+
+- Felipe | 01/04 | 19:30-21:00
+- Felipe | 16/04 | 18:30-20:30
+- Felipe | 22/04 | 18:30
+- Felipe | 28/03 | 18:00 | Física
+- Felipe | 03/04 | 18:30 | Matemática
+- Felipe | 07/03 | (sem horário) | Revisão Matemática
+- Felipe | 24/04 | (sem horário) | Química
+- Pietro | 04/04 | 18:00-19:30 | Álgebra
+- Pietro | 09/04 | (sem horário) | Geometria
+- Pietro | 14/04 | (sem horário) | Química
+- Pietro | 23/04 | (sem horário) | Física
+- João (Filho da Mariana) | 23/04 | 16:00 | Estudo para prova dia 29/04 | STATUS: PENDENTE DE CONFIRMAÇÃO
+- Maria | (sem data) | (terça-feira) | Aula extra a confirmar
+
+==================
+📌 OBSERVAÇÕES GERAIS
+==================
+
+- SEM AULAS DE 18/04 A 21/04 – FERIADO PROLONGADO
+
+[SUGESTÕES DE REALOCAÇÃO]
+- Otávio (Filho da Gisele): pode ser realocado de quarta (15:30-17:00) para sexta (15:30-17:00)
+
+[ANOTAÇÕES DE PROVAS]
+- Pietro: Prova em 24/03, estudo marcado para 19/03
+- Lorenzo: Conteúdo para aula 23/04 – modelos astrológicos (Heliocentrismo, Geocentrismo, Nicolau Copérnico, Galileu, Aristóteles, Aristarco)
+
+======================
+💡 AÇÕES PARA O AGENT
+======================
+
+1. Registrar todos os dados acima no banco de dados do site.
+2. Manter a distinção entre aulas fixas, aulas extras e observações.
+3. Para aulas extras, garantir que sejam exibidas em relatórios mensais por aluno.
+4. Destacar feriados no sistema para não permitir agendamento nesses dias.
+5. Salvar marcações de pendências e sugestões de realocação como status especiais.
+6. Não modificar a estrutura HTML do site, apenas atualizar/expandir os dados já existentes.
+7. Se possível, permitir busca por aluno, data ou tipo de aula (fixa/extra).
+

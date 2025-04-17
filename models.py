@@ -126,3 +126,15 @@ class Payment(db.Model):
     
     def __repr__(self):
         return f'<Payment {self.amount} - {self.payment_date}>'
+
+
+class Holiday(db.Model):
+    """Modelo para armazenar feriados e dias sem aula."""
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False, unique=True)
+    description = db.Column(db.String(200), nullable=False)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Holiday {self.date} - {self.description}>'

@@ -1,7 +1,7 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from datetime import datetime, date, timedelta
 from app import db
-from models import Student, Guardian, Lesson, Payment
+from models import Student, Guardian, Lesson, Payment, Holiday
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.utils
@@ -11,6 +11,20 @@ from io import BytesIO
 import os
 
 def register_routes(app):
+    # Injetar feriados em todas as páginas
+    @app.context_processor
+    def inject_holidays():
+        """Adiciona os próximos feriados para uso em todas as páginas"""
+        today = date.today()
+        next_month = today + timedelta(days=30)
+        
+        upcoming_holidays = Holiday.query.filter(
+            Holiday.date >= today,
+            Holiday.date <= next_month
+        ).order_by(Holiday.date).all()
+        
+        return {'upcoming_holidays': upcoming_holidays}
+    
     # Dashboard
     @app.route('/')
     def dashboard():
