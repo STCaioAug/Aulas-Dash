@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}Adicionar Aula Extra - Aulas Particulares Caio{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Adicionar Aula Extra</h1>
+        <p class="text-muted">Data: {{ selected_date.strftime('%d/%m/%Y') }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+            <input type="hidden" name="is_extra" value="1">
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="student_id" class="form-label">Aluno</label>
+                    <select class="form-select" id="student_id" name="student_id" required>
+                        <option value="">Selecione um aluno</option>
+                        {% for student in students %}
+                        <option value="{{ student.id }}">{{ student.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="subject" class="form-label">Matéria</label>
+                    <input type="text" class="form-control" id="subject" name="subject" required>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="start_time" class="form-label">Horário Início</label>
+                    <input type="time" class="form-control" id="start_time" name="start_time" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="end_time" class="form-label">Horário Fim</label>
+                    <input type="time" class="form-control" id="end_time" name="end_time" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" name="status" required>
+                        <option value="scheduled">Agendada</option>
+                        <option value="completed">Realizada</option>
+                        <option value="cancelled">Cancelada</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="topic" class="form-label">Tópico/Assunto</label>
+                <input type="text" class="form-control" id="topic" name="topic">
+            </div>
+            
+            <div class="mb-3">
+                <label for="notes" class="form-label">Observações</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="homework" class="form-label">Lição de Casa</label>
+                <textarea class="form-control" id="homework" name="homework" rows="3"></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="payment_amount" class="form-label">Valor (R$)</label>
+                <div class="input-group">
+                    <span class="input-group-text">R$</span>
+                    <input type="number" class="form-control" id="payment_amount" name="payment_amount" step="0.01" value="0.00">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="payment_status" class="form-label">Status do Pagamento</label>
+                <select class="form-select" id="payment_status" name="payment_status">
+                    <option value="unpaid">Não Pago</option>
+                    <option value="paid">Pago</option>
+                </select>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('daily_lessons', selected_date=selected_date.strftime('%Y-%m-%d')) }}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-success">Adicionar Aula Extra</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

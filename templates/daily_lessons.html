@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+
+{% block title %}Alimentação Diária - Aulas Particulares Caio{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1>Alimentação Diária de Aulas</h1>
+        <p class="text-muted">Registre as aulas do dia {{ date_today.strftime('%d/%m/%Y') }}</p>
+    </div>
+</div>
+
+<!-- Seletor de data -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="selected_date" class="form-label">Data</label>
+                        <input type="date" class="form-control" id="selected_date" name="selected_date" 
+                               value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">Buscar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Aulas Fixas do Dia -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Aulas Fixas ({{ day_of_week }})</h5>
+            </div>
+            <div class="card-body">
+                {% if fixed_lessons %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Aluno</th>
+                                <th>Horário</th>
+                                <th>Status</th>
+                                <th>Matéria</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lesson in fixed_lessons %}
+                            <tr>
+                                <td>{{ lesson.student.name }}</td>
+                                <td>{{ lesson.start_time.strftime('%H:%M') }} - {{ lesson.end_time.strftime('%H:%M') }}</td>
+                                <td>
+                                    {% if selected_date.strftime('%Y-%m-%d') == date_today.strftime('%Y-%m-%d') %}
+                                        {% if lesson.status == 'scheduled' %}
+                                        <span class="badge bg-warning">Aguardando</span>
+                                        {% elif lesson.status == 'completed' %}
+                                        <span class="badge bg-success">Confirmada</span>
+                                        {% elif lesson.status == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelada</span>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if lesson.status == 'scheduled' %}
+                                        <span class="badge bg-secondary">Agendada</span>
+                                        {% elif lesson.status == 'completed' %}
+                                        <span class="badge bg-success">Realizada</span>
+                                        {% elif lesson.status == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelada</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ lesson.subject }}
+                                    {% if lesson.topic %}
+                                    <small class="text-muted d-block">{{ lesson.topic }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if selected_date.strftime('%Y-%m-%d') >= date_today.strftime('%Y-%m-%d') %}
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('confirm_lesson', id=lesson.id) }}" class="btn btn-sm btn-success">Confirmar</a>
+                                        <a href="{{ url_for('reschedule_lesson', id=lesson.id) }}" class="btn btn-sm btn-warning">Remarcar</a>
+                                        <a href="{{ url_for('cancel_lesson', id=lesson.id) }}" class="btn btn-sm btn-danger">Cancelar</a>
+                                    </div>
+                                    {% else %}
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('edit_lesson', id=lesson.id) }}" class="btn btn-sm btn-primary">Editar</a>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center text-muted my-3">Não há aulas fixas para {{ day_of_week }}.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Aulas Extras -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Aulas Extras</h5>
+                <a href="{{ url_for('new_extra_lesson', date=selected_date.strftime('%Y-%m-%d')) }}" class="btn btn-light btn-sm">
+                    + Adicionar Aula Extra
+                </a>
+            </div>
+            <div class="card-body">
+                {% if extra_lessons %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Aluno</th>
+                                <th>Horário</th>
+                                <th>Status</th>
+                                <th>Matéria</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lesson in extra_lessons %}
+                            <tr>
+                                <td>{{ lesson.student.name }}</td>
+                                <td>{{ lesson.start_time.strftime('%H:%M') }} - {{ lesson.end_time.strftime('%H:%M') }}</td>
+                                <td>
+                                    {% if selected_date.strftime('%Y-%m-%d') == date_today.strftime('%Y-%m-%d') %}
+                                        {% if lesson.status == 'scheduled' %}
+                                        <span class="badge bg-warning">Aguardando</span>
+                                        {% elif lesson.status == 'completed' %}
+                                        <span class="badge bg-success">Confirmada</span>
+                                        {% elif lesson.status == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelada</span>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if lesson.status == 'scheduled' %}
+                                        <span class="badge bg-secondary">Agendada</span>
+                                        {% elif lesson.status == 'completed' %}
+                                        <span class="badge bg-success">Realizada</span>
+                                        {% elif lesson.status == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelada</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ lesson.subject }}
+                                    {% if lesson.topic %}
+                                    <small class="text-muted d-block">{{ lesson.topic }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if selected_date.strftime('%Y-%m-%d') >= date_today.strftime('%Y-%m-%d') %}
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('confirm_lesson', id=lesson.id) }}" class="btn btn-sm btn-success">Confirmar</a>
+                                        <a href="{{ url_for('edit_lesson', id=lesson.id) }}" class="btn btn-sm btn-primary">Editar</a>
+                                        <a href="{{ url_for('cancel_lesson', id=lesson.id) }}" class="btn btn-sm btn-danger">Cancelar</a>
+                                    </div>
+                                    {% else %}
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('edit_lesson', id=lesson.id) }}" class="btn btn-sm btn-primary">Editar</a>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center text-muted my-3">Não há aulas extras agendadas para esta data.</p>
+                <div class="text-center">
+                    <a href="{{ url_for('new_extra_lesson', date=selected_date.strftime('%Y-%m-%d')) }}" class="btn btn-success">
+                        Adicionar Aula Extra
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formulário para adicionar observações rápidas -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Registro Rápido de Aula</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('quick_lesson_update') }}">
+                    <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="student_id" class="form-label">Aluno</label>
+                            <select class="form-select" id="student_id" name="student_id" required>
+                                <option value="">Selecione um aluno</option>
+                                {% for student in students %}
+                                <option value="{{ student.id }}">{{ student.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="subject" class="form-label">Matéria</label>
+                            <input type="text" class="form-control" id="subject" name="subject" required placeholder="Ex: Matemática, Física...">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="topic" class="form-label">Tópico/Assunto</label>
+                            <input type="text" class="form-control" id="topic" name="topic" placeholder="Ex: Equações, Cinemática...">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="completed">Realizada</option>
+                                <option value="scheduled">Agendada</option>
+                                <option value="cancelled">Cancelada</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label for="start_time" class="form-label">Horário Início</label>
+                            <input type="time" class="form-control" id="start_time" name="start_time" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_time" class="form-label">Horário Fim</label>
+                            <input type="time" class="form-control" id="end_time" name="end_time" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="lesson_type" class="form-label">Tipo de Aula</label>
+                            <select class="form-select" id="lesson_type" name="lesson_type" required>
+                                <option value="fixed">Fixa</option>
+                                <option value="extra">Extra</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Observações</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Observações sobre a aula..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="homework" class="form-label">Lição de Casa</label>
+                        <textarea class="form-control" id="homework" name="homework" rows="2" placeholder="Tarefa para a próxima aula..."></textarea>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Registrar Aula</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

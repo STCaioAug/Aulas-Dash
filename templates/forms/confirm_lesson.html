@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Aula - Aulas Particulares Caio{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Confirmar Aula</h1>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="alert alert-info">
+            <h5 class="alert-heading">Detalhes da Aula</h5>
+            <p><strong>Aluno:</strong> {{ lesson.student.name }}</p>
+            <p><strong>Data:</strong> {{ lesson.date.strftime('%d/%m/%Y') }}</p>
+            <p><strong>Horário:</strong> {{ lesson.start_time.strftime('%H:%M') }} - {{ lesson.end_time.strftime('%H:%M') }}</p>
+            <p><strong>Tipo:</strong> {% if lesson.lesson_type == 'fixed' %}Fixa{% else %}Extra{% endif %}</p>
+        </div>
+        
+        <form method="POST">
+            <div class="mb-3">
+                <label for="subject" class="form-label">Matéria</label>
+                <input type="text" class="form-control" id="subject" name="subject" value="{{ lesson.subject }}" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="topic" class="form-label">Tópico/Assunto</label>
+                <input type="text" class="form-control" id="topic" name="topic" value="{{ lesson.topic or '' }}">
+            </div>
+            
+            <div class="mb-3">
+                <label for="notes" class="form-label">Observações</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3">{{ lesson.notes or '' }}</textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="homework" class="form-label">Lição de Casa</label>
+                <textarea class="form-control" id="homework" name="homework" rows="3">{{ lesson.homework or '' }}</textarea>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('daily_lessons', selected_date=lesson.date.strftime('%Y-%m-%d')) }}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-success">Confirmar Aula</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -84,6 +84,7 @@ class Lesson(db.Model):
     subject = db.Column(db.String(100), nullable=False)
     topic = db.Column(db.String(200))
     status = db.Column(db.String(20), default='scheduled')  # scheduled, completed, cancelled
+    lesson_type = db.Column(db.String(20), default='fixed')  # fixed, extra
     notes = db.Column(db.Text)
     homework = db.Column(db.Text)
     payment_status = db.Column(db.String(20), default='unpaid')  # unpaid, paid
@@ -93,6 +94,22 @@ class Lesson(db.Model):
     
     def __repr__(self):
         return f'<Lesson {self.subject} - {self.date}>'
+    
+    @property
+    def duration_hours(self):
+        """Retorna a duração da aula em horas (float)"""
+        if not self.start_time or not self.end_time:
+            return 0.0
+        
+        start_minutes = self.start_time.hour * 60 + self.start_time.minute
+        end_minutes = self.end_time.hour * 60 + self.end_time.minute
+        
+        # Se end_time for menor que start_time, assume que a aula passou da meia-noite
+        if end_minutes < start_minutes:
+            end_minutes += 24 * 60
+            
+        duration_minutes = end_minutes - start_minutes
+        return duration_minutes / 60.0
 
 
 class Payment(db.Model):

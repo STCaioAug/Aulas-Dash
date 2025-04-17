@@ -1,0 +1,112 @@
+Objetivo: Quero expandir as funcionalidades do meu site, que já está rodando corretamente em Python e HTML (Flask), sem modificar sua estrutura atual. O sistema é usado para gerenciar aulas particulares.
+
+Desejo implementar os recursos abaixo de forma modular e funcional, respeitando as tecnologias já utilizadas. Use boas práticas e mantenha o projeto limpo e bem organizado.
+
+🧠 FUNCIONALIDADES A IMPLEMENTAR
+✅ Alimentação diária de dados
+
+Criar uma interface simples (painel) para registrar aulas dadas no dia.
+
+Deve permitir:
+
+Confirmar aulas fixas do dia.
+
+Cancelar ou remarcar uma aula.
+
+Adicionar aula extra.
+
+Cada aula registrada deve conter:
+
+Aluno
+
+Data
+
+Hora
+
+Tipo (fixa, extra, cancelada)
+
+Matéria/assunto estudado
+
+Observações
+
+📊 Pareto das matérias mais estudadas
+
+Criar um gráfico de Pareto no painel principal mostrando as matérias mais estudadas no mês ou na semana.
+
+Baseado nas aulas registradas.
+
+Pode usar bibliotecas como Chart.js ou Plotly no HTML.
+
+🧾 Página de relatório mensal por aluno
+
+Criar uma rota /relatorio/<aluno_id> com:
+
+Nome do aluno
+
+Total de aulas no mês
+
+Total de horas
+
+Lista de assuntos estudados
+
+Datas das aulas
+
+Adicionar botão para exportar como PDF (usando lib como xhtml2pdf ou similar).
+
+Exibir um relatório por mês.
+
+📅 Painel semanal com horários e gaps
+
+Criar uma visualização clara das aulas fixas da semana.
+
+Mostrar horários livres (gaps).
+
+Sugerir possíveis encaixes para alunos que ainda não fecharam horários.
+
+Esse painel deve ser atualizado com base nas aulas registradas.
+
+📬 Relatórios personalizados para responsáveis
+
+Permitir cadastrar um responsável e associar a ele um ou mais alunos.
+
+Criar uma rota /responsavel/<id> com:
+
+Nome dos filhos
+
+Quantidade de aulas de cada um
+
+Valor acordado (manual por responsável)
+
+Valor total do mês
+
+Gerar relatório mensal por responsável.
+
+Adicionar botão para exportar em PDF.
+
+📅 Correções na Agenda
+Atualize o sistema para considerar os seguintes dados fixos (modelo inicial):
+
+Segunda-feira:
+
+João
+
+Maria
+
+Pietro:
+
+Não é fixo, mas geralmente reserva na segunda ou quarta.
+
+João Paulo:
+
+Aula de inglês no sábado, das 8h30 às 9h30.
+
+⚙️ Instruções técnicas
+Não modifique a estrutura atual do site.
+
+Utilize as rotas e base do Flask que já existem.
+
+Crie novos templates HTML apenas quando necessário.
+
+Organize bem os arquivos: models.py, routes.py, templates/, static/, etc.
+
+O banco de dados já usa SQLAlchemy com PostgreSQL (via psycopg2-binary), continue usando.

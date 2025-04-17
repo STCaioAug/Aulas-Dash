@@ -2,6 +2,13 @@ from flask import render_template, request, redirect, url_for, flash, jsonify
 from datetime import datetime, date, timedelta
 from app import db
 from models import Student, Guardian, Lesson, Payment
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.utils
+import json
+from xhtml2pdf import pisa
+from io import BytesIO
+import os
 
 def register_routes(app):
     # Dashboard
@@ -416,3 +423,533 @@ def register_routes(app):
             'school': student.school
         } for student in students]
         return jsonify(result)
+        
+    # Daily Lessons Management
+    @app.route('/daily-lessons')
+    def daily_lessons():
+        # Get date from request, default to today
+        selected_date_str = request.args.get('selected_date')
+        date_today = date.today()
+        
+        if selected_date_str:
+            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        else:
+            selected_date = date_today
+        
+        # Get day of week in Portuguese
+        days_of_week = {
+            0: "Segunda-feira",
+            1: "Terça-feira",
+            2: "Quarta-feira",
+            3: "Quinta-feira",
+            4: "Sexta-feira",
+            5: "Sábado",
+            6: "Domingo"
+        }
+        day_of_week = days_of_week[selected_date.weekday()]
+        
+        # Get fixed lessons for the day
+        fixed_lessons = Lesson.query.filter(
+            Lesson.date == selected_date,
+            Lesson.lesson_type == 'fixed'
+        ).order_by(Lesson.start_time).all()
+        
+        # Get extra lessons for the day
+        extra_lessons = Lesson.query.filter(
+            Lesson.date == selected_date,
+            Lesson.lesson_type == 'extra'
+        ).order_by(Lesson.start_time).all()
+        
+        # Get all students for quick lesson form
+        students = Student.query.all()
+        
+        return render_template(
+            'daily_lessons.html',
+            selected_date=selected_date,
+            date_today=date_today,
+            day_of_week=day_of_week,
+            fixed_lessons=fixed_lessons,
+            extra_lessons=extra_lessons,
+            students=students
+        )
+    
+    @app.route('/lessons/new-extra', methods=['GET', 'POST'])
+    def new_extra_lesson():
+        # Get date from request, default to today
+        date_str = request.args.get('date')
+        if date_str:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        else:
+            selected_date = date.today()
+        
+        if request.method == 'POST':
+            try:
+                student_id = request.form.get('student_id')
+                lesson_date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
+                start_time = datetime.strptime(request.form.get('start_time'), '%H:%M').time()
+                end_time = datetime.strptime(request.form.get('end_time'), '%H:%M').time()
+                
+                lesson = Lesson(
+                    student_id=student_id,
+                    date=lesson_date,
+                    start_time=start_time,
+                    end_time=end_time,
+                    subject=request.form.get('subject'),
+                    topic=request.form.get('topic'),
+                    status=request.form.get('status', 'scheduled'),
+                    lesson_type='extra',  # Extra lesson
+                    notes=request.form.get('notes'),
+                    homework=request.form.get('homework'),
+                    payment_status=request.form.get('payment_status', 'unpaid'),
+                    payment_amount=float(request.form.get('payment_amount') or 0)
+                )
+                
+                db.session.add(lesson)
+                db.session.commit()
+                
+                flash('Aula extra criada com sucesso!', 'success')
+                return redirect(url_for('daily_lessons', selected_date=lesson_date.strftime('%Y-%m-%d')))
+            except Exception as e:
+                flash(f'Erro ao criar aula extra: {str(e)}', 'danger')
+        
+        students = Student.query.all()
+        return render_template('forms/extra_lesson_form.html', students=students, selected_date=selected_date)
+    
+    @app.route('/lessons/<int:id>/confirm', methods=['GET', 'POST'])
+    def confirm_lesson(id):
+        lesson = Lesson.query.get_or_404(id)
+        
+        if request.method == 'POST':
+            lesson.status = 'completed'
+            lesson.subject = request.form.get('subject', lesson.subject)
+            lesson.topic = request.form.get('topic')
+            lesson.notes = request.form.get('notes')
+            lesson.homework = request.form.get('homework')
+            
+            db.session.commit()
+            
+            flash('Aula confirmada com sucesso!', 'success')
+            return redirect(url_for('daily_lessons', selected_date=lesson.date.strftime('%Y-%m-%d')))
+            
+        # Quick confirmation (GET request)
+        if request.args.get('quick') == '1':
+            lesson.status = 'completed'
+            db.session.commit()
+            
+            flash('Aula confirmada com sucesso!', 'success')
+            return redirect(url_for('daily_lessons', selected_date=lesson.date.strftime('%Y-%m-%d')))
+            
+        return render_template('forms/confirm_lesson.html', lesson=lesson)
+    
+    @app.route('/lessons/<int:id>/cancel', methods=['GET', 'POST'])
+    def cancel_lesson(id):
+        lesson = Lesson.query.get_or_404(id)
+        
+        if request.method == 'POST':
+            lesson.status = 'cancelled'
+            lesson.notes = request.form.get('notes', lesson.notes)
+            
+            db.session.commit()
+            
+            flash('Aula cancelada com sucesso!', 'success')
+            return redirect(url_for('daily_lessons', selected_date=lesson.date.strftime('%Y-%m-%d')))
+            
+        # Quick cancellation (GET request)
+        if request.args.get('quick') == '1':
+            lesson.status = 'cancelled'
+            db.session.commit()
+            
+            flash('Aula cancelada com sucesso!', 'success')
+            return redirect(url_for('daily_lessons', selected_date=lesson.date.strftime('%Y-%m-%d')))
+            
+        return render_template('forms/cancel_lesson.html', lesson=lesson)
+    
+    @app.route('/lessons/<int:id>/reschedule', methods=['GET', 'POST'])
+    def reschedule_lesson(id):
+        lesson = Lesson.query.get_or_404(id)
+        
+        if request.method == 'POST':
+            try:
+                new_date = datetime.strptime(request.form.get('new_date'), '%Y-%m-%d').date()
+                
+                # Create new lesson based on the old one
+                new_lesson = Lesson(
+                    student_id=lesson.student_id,
+                    date=new_date,
+                    start_time=lesson.start_time,
+                    end_time=lesson.end_time,
+                    subject=lesson.subject,
+                    topic=lesson.topic,
+                    status='scheduled',
+                    lesson_type=lesson.lesson_type,
+                    notes=f"Remarcada da aula de {lesson.date.strftime('%d/%m/%Y')}. " + (lesson.notes or ''),
+                    homework=lesson.homework,
+                    payment_status=lesson.payment_status,
+                    payment_amount=lesson.payment_amount
+                )
+                
+                # Mark old lesson as cancelled
+                lesson.status = 'cancelled'
+                lesson.notes = f"Remarcada para {new_date.strftime('%d/%m/%Y')}. " + (lesson.notes or '')
+                
+                db.session.add(new_lesson)
+                db.session.commit()
+                
+                flash('Aula remarcada com sucesso!', 'success')
+                return redirect(url_for('daily_lessons', selected_date=new_date.strftime('%Y-%m-%d')))
+            except Exception as e:
+                flash(f'Erro ao remarcar aula: {str(e)}', 'danger')
+                
+        return render_template('forms/reschedule_lesson.html', lesson=lesson)
+        
+    @app.route('/quick-lesson-update', methods=['POST'])
+    def quick_lesson_update():
+        """Registro rápido de aula na página daily_lessons"""
+        try:
+            student_id = request.form.get('student_id')
+            lesson_date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
+            start_time = datetime.strptime(request.form.get('start_time'), '%H:%M').time()
+            end_time = datetime.strptime(request.form.get('end_time'), '%H:%M').time()
+            lesson_type = request.form.get('lesson_type', 'fixed')
+            
+            # Verificar se já existe uma aula neste horário
+            existing_lesson = Lesson.query.filter(
+                Lesson.date == lesson_date,
+                Lesson.student_id == student_id,
+                Lesson.start_time == start_time
+            ).first()
+            
+            if existing_lesson:
+                # Atualizar aula existente
+                existing_lesson.end_time = end_time
+                existing_lesson.subject = request.form.get('subject')
+                existing_lesson.topic = request.form.get('topic')
+                existing_lesson.status = request.form.get('status')
+                existing_lesson.notes = request.form.get('notes')
+                existing_lesson.homework = request.form.get('homework')
+                existing_lesson.lesson_type = lesson_type
+                
+                db.session.commit()
+                flash('Aula atualizada com sucesso!', 'success')
+            else:
+                # Criar nova aula
+                lesson = Lesson(
+                    student_id=student_id,
+                    date=lesson_date,
+                    start_time=start_time,
+                    end_time=end_time,
+                    subject=request.form.get('subject'),
+                    topic=request.form.get('topic'),
+                    status=request.form.get('status', 'completed'),
+                    lesson_type=lesson_type,
+                    notes=request.form.get('notes'),
+                    homework=request.form.get('homework'),
+                )
+                
+                db.session.add(lesson)
+                db.session.commit()
+                flash('Aula registrada com sucesso!', 'success')
+                
+            return redirect(url_for('daily_lessons', selected_date=lesson_date.strftime('%Y-%m-%d')))
+        except Exception as e:
+            flash(f'Erro ao registrar aula: {str(e)}', 'danger')
+            return redirect(url_for('daily_lessons'))
+            
+    # Análise de Pareto
+    @app.route('/pareto-chart')
+    def pareto_chart():
+        """Gera um gráfico de Pareto das matérias mais estudadas"""
+        # Obter parâmetros de filtro
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        student_id = request.args.get('student_id')
+        
+        # Configurar datas (padrão: mês atual)
+        today = date.today()
+        if not start_date_str:
+            # Primeiro dia do mês atual
+            start_date = date(today.year, today.month, 1)
+        else:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            
+        if not end_date_str:
+            # Último dia do mês atual
+            if today.month == 12:
+                end_date = date(today.year + 1, 1, 1) - timedelta(days=1)
+            else:
+                end_date = date(today.year, today.month + 1, 1) - timedelta(days=1)
+        else:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        
+        # Base query para aulas completadas no período
+        query = Lesson.query.filter(
+            Lesson.date >= start_date,
+            Lesson.date <= end_date,
+            Lesson.status == 'completed'
+        )
+        
+        # Filtrar por aluno se especificado
+        if student_id:
+            query = query.filter(Lesson.student_id == student_id)
+        
+        # Executar a consulta
+        lessons = query.all()
+        
+        # Agrupar por matéria
+        subject_counts = {}
+        subject_hours = {}
+        
+        for lesson in lessons:
+            subject = lesson.subject
+            if subject not in subject_counts:
+                subject_counts[subject] = 0
+                subject_hours[subject] = 0
+            
+            subject_counts[subject] += 1
+            subject_hours[subject] += lesson.duration_hours
+        
+        # Ordenar por contagem (decrescente)
+        sorted_subjects = sorted(subject_counts.keys(), key=lambda x: subject_counts[x], reverse=True)
+        
+        # Preparar dados para o gráfico de Pareto
+        if sorted_subjects:
+            # Calcular porcentagens e valores acumulados
+            total_count = sum(subject_counts.values())
+            total_hours = sum(subject_hours.values())
+            
+            subject_data = []
+            cumulative_percentage = 0
+            
+            for subject in sorted_subjects:
+                count = subject_counts[subject]
+                hours = subject_hours[subject]
+                percentage = (count / total_count) * 100
+                cumulative_percentage += percentage
+                
+                subject_data.append({
+                    'name': subject,
+                    'count': count,
+                    'hours': hours,
+                    'percentage': percentage,
+                    'cumulative': cumulative_percentage
+                })
+            
+            # Criar gráfico com Plotly
+            subjects = [item['name'] for item in subject_data]
+            counts = [item['count'] for item in subject_data]
+            cumulative = [item['cumulative'] for item in subject_data]
+            
+            # Criar figura com dois eixos Y
+            fig = go.Figure()
+            
+            # Adicionar barras para contagem
+            fig.add_trace(go.Bar(
+                x=subjects,
+                y=counts,
+                name='Aulas',
+                marker_color='rgba(55, 83, 109, 0.7)'
+            ))
+            
+            # Adicionar linha para porcentagem acumulada
+            fig.add_trace(go.Scatter(
+                x=subjects,
+                y=cumulative,
+                name='% Acumulada',
+                yaxis='y2',
+                marker_color='rgb(26, 118, 255)',
+                mode='lines+markers'
+            ))
+            
+            # Configurar layout com eixos duplos
+            fig.update_layout(
+                title='Análise de Pareto das Matérias Mais Estudadas',
+                xaxis=dict(
+                    title='Matéria',
+                    tickfont=dict(size=12)
+                ),
+                yaxis=dict(
+                    title='Quantidade de Aulas',
+                    tickfont=dict(size=12)
+                ),
+                yaxis2=dict(
+                    title='Porcentagem Acumulada',
+                    titlefont=dict(color='rgb(26, 118, 255)'),
+                    tickfont=dict(color='rgb(26, 118, 255)'),
+                    overlaying='y',
+                    side='right',
+                    range=[0, 100]
+                ),
+                legend=dict(x=0.01, y=0.99),
+                margin=dict(l=50, r=50, t=80, b=50),
+                template='plotly_dark'
+            )
+            
+            # Converter para HTML
+            plot_html = fig.to_html(full_html=False)
+        else:
+            # Sem dados para exibir
+            plot_html = None
+            subject_data = []
+        
+        # Buscar todos os alunos para o filtro
+        students = Student.query.all()
+        
+        return render_template(
+            'pareto_chart.html',
+            plot_html=plot_html,
+            subject_data=subject_data,
+            start_date=start_date,
+            end_date=end_date,
+            student_id=student_id,
+            students=students
+        )
+        
+    # Relatório por Aluno
+    @app.route('/student-report')
+    def student_report():
+        """Gera um relatório mensal por aluno"""
+        # Obter parâmetros de filtro
+        student_id = request.args.get('student_id')
+        month = request.args.get('month')
+        year = request.args.get('year')
+        
+        # Verificar se o aluno foi especificado
+        if not student_id:
+            flash('É necessário selecionar um aluno para gerar o relatório.', 'warning')
+            return redirect(url_for('list_students'))
+            
+        # Buscar aluno
+        student = Student.query.get_or_404(student_id)
+        
+        # Configurar mês/ano padrão (mês atual)
+        today = date.today()
+        if not month:
+            month = today.month
+        else:
+            month = int(month)
+            
+        if not year:
+            year = today.year
+        else:
+            year = int(year)
+            
+        # Calcular período do relatório
+        start_date = date(year, month, 1)
+        
+        # Calcular último dia do mês
+        if month == 12:
+            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+            
+        # Buscar aulas do aluno no período
+        lessons = Lesson.query.filter(
+            Lesson.student_id == student_id,
+            Lesson.date >= start_date,
+            Lesson.date <= end_date
+        ).order_by(Lesson.date, Lesson.start_time).all()
+        
+        # Calcular estatísticas
+        total_hours = sum(lesson.duration_hours for lesson in lessons if lesson.status == 'completed')
+        
+        # Contar ocorrências de matérias
+        subjects = {}
+        for lesson in lessons:
+            if lesson.status == 'completed':
+                if lesson.subject not in subjects:
+                    subjects[lesson.subject] = 0
+                subjects[lesson.subject] += 1
+                
+        # Ordenar matérias por ocorrência (decrescente)
+        subjects = dict(sorted(subjects.items(), key=lambda x: x[1], reverse=True))
+        
+        # Obter anos para o seletor (desde o primeiro registro até o ano atual)
+        first_lesson = Lesson.query.filter(Lesson.student_id == student_id).order_by(Lesson.date).first()
+        
+        if first_lesson:
+            first_year = first_lesson.date.year
+        else:
+            first_year = today.year
+            
+        years = list(range(first_year, today.year + 1))
+        
+        return render_template(
+            'student_report.html',
+            student=student,
+            lessons=lessons,
+            total_hours=total_hours,
+            subjects=subjects,
+            month=month,
+            year=year,
+            years=years
+        )
+        
+    @app.route('/export-student-report-pdf/<int:student_id>/<int:month>/<int:year>')
+    def export_student_report_pdf(student_id, month, year):
+        """Exporta o relatório do aluno em PDF"""
+        # Buscar aluno
+        student = Student.query.get_or_404(student_id)
+        
+        # Calcular período do relatório
+        start_date = date(year, month, 1)
+        
+        # Calcular último dia do mês
+        if month == 12:
+            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+            
+        # Buscar aulas do aluno no período
+        lessons = Lesson.query.filter(
+            Lesson.student_id == student_id,
+            Lesson.date >= start_date,
+            Lesson.date <= end_date
+        ).order_by(Lesson.date, Lesson.start_time).all()
+        
+        # Calcular estatísticas
+        total_hours = sum(lesson.duration_hours for lesson in lessons if lesson.status == 'completed')
+        
+        # Contar ocorrências de matérias
+        subjects = {}
+        for lesson in lessons:
+            if lesson.status == 'completed':
+                if lesson.subject not in subjects:
+                    subjects[lesson.subject] = 0
+                subjects[lesson.subject] += 1
+                
+        # Ordenar matérias por ocorrência (decrescente)
+        subjects = dict(sorted(subjects.items(), key=lambda x: x[1], reverse=True))
+        
+        # Nome dos meses em português
+        meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+        
+        # Renderizar o template HTML para o PDF
+        html = render_template(
+            'pdf/student_report_pdf.html',
+            student=student,
+            lessons=lessons,
+            total_hours=total_hours,
+            subjects=subjects,
+            month=month,
+            year=year,
+            month_name=meses[month-1],
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        # Criar PDF a partir do HTML
+        pdf_buffer = BytesIO()
+        pisa.CreatePDF(html, dest=pdf_buffer)
+        
+        # Preparar resposta
+        pdf_buffer.seek(0)
+        response = app.response_class(
+            pdf_buffer,
+            mimetype='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename=relatorio_{student.name.replace(" ", "_")}_{meses[month-1]}_{year}.pdf'
+            }
+        )
+        
+        return response

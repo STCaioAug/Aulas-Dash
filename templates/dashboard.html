@@ -45,6 +45,37 @@
     </div>
 </div>
 
+<!-- Ações Rápidas -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Alimentação Diária</h5>
+                <p class="text-muted">Registre aulas do dia, confirme e administre aulas extras</p>
+                <a href="{{ url_for('daily_lessons') }}" class="btn btn-primary">Acessar</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Análise de Pareto</h5>
+                <p class="text-muted">Visualize as matérias mais estudadas em um gráfico de Pareto</p>
+                <a href="{{ url_for('pareto_chart') }}" class="btn btn-success">Ver Gráfico</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Relatórios por Aluno</h5>
+                <p class="text-muted">Gere relatórios mensais por aluno com exportação em PDF</p>
+                <a href="{{ url_for('reports') }}" class="btn btn-info">Relatórios</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Agenda Semanal -->
 <div class="row mb-4">
     <div class="col-12">
