@@ -114,7 +114,6 @@
                                     Com base na sua disponibilidade, os melhores dias para agendar novas aulas são:
                                 </p>
                                 <ul>
-                                    {% set sorted_available = horas_livres.items()|list|sort(reverse=True, key=lambda x: x[1]) %}
                                     {% for dia, horas in sorted_available[:3] %}
                                         {% if horas > 0 %}
                                         <li><strong>{{ dia }}</strong>: {{ "%.1f"|format(horas) }} horas disponíveis</li>
@@ -132,7 +131,6 @@
                                     Dias com maior carga de trabalho:
                                 </p>
                                 <ul>
-                                    {% set sorted_occupied = horas_ocupadas.items()|list|sort(reverse=True, key=lambda x: x[1]) %}
                                     {% for dia, horas in sorted_occupied[:3] %}
                                         {% if horas > 0 %}
                                         <li><strong>{{ dia }}</strong>: {{ "%.1f"|format(horas) }} horas ocupadas</li>
@@ -174,16 +172,13 @@
 <!-- Plotly.js -->
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
-    // Render gráfico de horas ocupadas
     const ocupadasData = {{ ocupadas_graph|safe }};
     Plotly.newPlot('ocupadas-chart', ocupadasData.data, ocupadasData.layout, {responsive: true});
-    
-    // Render gráfico de horas livres
+
     const livresData = {{ livres_graph|safe }};
     Plotly.newPlot('livres-chart', livresData.data, livresData.layout, {responsive: true});
-    
-    // Ajustar gráficos ao redimensionar a janela
-    window.addEventListener('resize', function() {
+
+    window.addEventListener('resize', function () {
         Plotly.Plots.resize('ocupadas-chart');
         Plotly.Plots.resize('livres-chart');
     });
