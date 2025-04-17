@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatório do Responsável - {{ guardian.name }} - Aulas Particulares Caio{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h1>Relatório Mensal: {{ guardian.name }}</h1>
+        <div>
+            <a href="{{ url_for('export_guardian_report_pdf', guardian_id=guardian.id, month=month, year=year) }}" class="btn btn-danger me-2">
+                <i class="fas fa-file-pdf"></i> Exportar PDF
+            </a>
+            <a href="{{ url_for('list_guardians') }}" class="btn btn-outline-secondary">Voltar para Responsáveis</a>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <input type="hidden" name="guardian_id" value="{{ guardian.id }}">
+                    <div class="col-md-3">
+                        <label for="month" class="form-label">Mês</label>
+                        <select class="form-select" id="month" name="month">
+                            {% for i in range(1, 13) %}
+                            <option value="{{ i }}" {% if month == i %}selected{% endif %}>
+                                {{ ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][i-1] }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="year" class="form-label">Ano</label>
+                        <select class="form-select" id="year" name="year">
+                            {% for y in years %}
+                            <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">Filtrar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumo do Responsável -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Dados do Responsável</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Nome:</strong> {{ guardian.name }}</p>
+                        <p><strong>Email:</strong> {{ guardian.email or 'N/A' }}</p>
+                        <p><strong>Telefone:</strong> {{ guardian.phone or 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>WhatsApp:</strong> {{ guardian.whatsapp or 'N/A' }}</p>
+                        <p><strong>Endereço:</strong> {{ guardian.address or 'N/A' }}</p>
+                        <p><strong>Alunos:</strong> {{ guardian.primary_students|length + guardian.students|length }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estatísticas do Mês -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total de Aulas</h5>
+                <h2 class="display-4">{{ total_lessons }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total de Horas</h5>
+                <h2 class="display-4">{{ "%.1f"|format(total_hours) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">Valor Total</h5>
+                <h2 class="display-4">R$ {{ "%.2f"|format(total_amount) }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alunos e Aulas -->
+<div class="row">
+    {% for student, student_data in student_lessons.items() %}
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">{{ student.name }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <div><strong>Total de Aulas:</strong> {{ student_data['lessons']|length }}</div>
+                    <div><strong>Total de Horas:</strong> {{ "%.1f"|format(student_data['hours']) }}</div>
+                    <div><strong>Valor:</strong> R$ {{ "%.2f"|format(student_data['amount']) }}</div>
+                </div>
+                
+                {% if student_data['lessons'] %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Horário</th>
+                                <th>Matéria</th>
+                                <th>Tópico</th>
+                                <th>Status</th>
+                                <th>Duração</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lesson in student_data['lessons'] %}
+                            <tr>
+                                <td>{{ lesson.date.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ lesson.start_time.strftime('%H:%M') }} - {{ lesson.end_time.strftime('%H:%M') }}</td>
+                                <td>{{ lesson.subject }}</td>
+                                <td>{{ lesson.topic or '-' }}</td>
+                                <td>
+                                    {% if lesson.status == 'completed' %}
+                                    <span class="badge bg-success">Realizada</span>
+                                    {% elif lesson.status == 'scheduled' %}
+                                    <span class="badge bg-primary">Agendada</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Cancelada</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ "%.1f"|format(lesson.duration_hours) }}h</td>
+                                <td>R$ {{ "%.2f"|format(lesson.payment_amount) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center text-muted my-3">Não há aulas registradas para este aluno no mês selecionado.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagamentos -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Pagamentos</h5>
+                <a href="{{ url_for('new_payment', guardian_id=guardian.id) }}" class="btn btn-light btn-sm">
+                    Registrar Pagamento
+                </a>
+            </div>
+            <div class="card-body">
+                {% if payments %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Valor</th>
+                                <th>Método</th>
+                                <th>Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments %}
+                            <tr>
+                                <td>{{ payment.payment_date.strftime('%d/%m/%Y') }}</td>
+                                <td>R$ {{ "%.2f"|format(payment.amount) }}</td>
+                                <td>{{ payment.payment_method or '-' }}</td>
+                                <td>{{ payment.description or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center text-muted my-3">Não há pagamentos registrados para este responsável no mês selecionado.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumo Financeiro -->
+<div class="row">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title">Resumo Financeiro</h5>
+                <div class="table-responsive">
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <th>Total de Aulas</th>
+                                <td>{{ total_lessons }}</td>
+                            </tr>
+                            <tr>
+                                <th>Total de Horas</th>
+                                <td>{{ "%.1f"|format(total_hours) }}h</td>
+                            </tr>
+                            <tr>
+                                <th>Valor Total</th>
+                                <td>R$ {{ "%.2f"|format(total_amount) }}</td>
+                            </tr>
+                            <tr>
+                                <th>Pagamentos Realizados</th>
+                                <td>R$ {{ "%.2f"|format(total_payments) }}</td>
+                            </tr>
+                            <tr>
+                                <th>Saldo</th>
+                                <td>
+                                    {% set balance = total_payments - total_amount %}
+                                    {% if balance >= 0 %}
+                                    <span class="text-success">R$ {{ "%.2f"|format(balance) }} (Crédito)</span>
+                                    {% else %}
+                                    <span class="text-danger">R$ {{ "%.2f"|format(-balance) }} (Débito)</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

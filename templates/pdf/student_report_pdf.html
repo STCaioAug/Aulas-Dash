@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório do Aluno - {{ student.name }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 2cm;
+            @frame header {
+                -pdf-frame-content: headerContent;
+                top: 0.5cm;
+                margin-left: 1cm;
+                margin-right: 1cm;
+                height: 3cm;
+            }
+            @frame footer {
+                -pdf-frame-content: footerContent;
+                bottom: 0cm;
+                margin-left: 1cm;
+                margin-right: 1cm;
+                height: 1cm;
+            }
+        }
+        body {
+            font-family: sans-serif;
+            color: #333;
+            line-height: 1.5;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        h2 {
+            color: #3498db;
+            font-size: 18px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .period {
+            color: #7f8c8d;
+            font-size: 14px;
+            font-style: italic;
+        }
+        .student-info {
+            margin: 20px 0;
+            border: 1px solid #eee;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .student-info p {
+            margin: 5px 0;
+        }
+        .student-info strong {
+            display: inline-block;
+            width: 120px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        .stat-box {
+            width: 30%;
+            text-align: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            background-color: #f5f5f5;
+        }
+        .stat-box h3 {
+            margin: 0;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .stat-box .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2980b9;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th {
+            background-color: #2c3e50;
+            color: white;
+            text-align: left;
+            padding: 10px;
+        }
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 3px;
+            font-size: 12px;
+            color: white;
+        }
+        .badge-success {
+            background-color: #27ae60;
+        }
+        .badge-primary {
+            background-color: #3498db;
+        }
+        .badge-danger {
+            background-color: #e74c3c;
+        }
+        .subjects-list {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .subject-item {
+            width: 30%;
+            margin: 1%;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #7f8c8d;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="headerContent" class="header">
+        <h1>Aulas Particulares Caio</h1>
+        <div class="period">Relatório Mensal: {{ month_name }}/{{ year }}</div>
+    </div>
+    
+    <div class="content">
+        <h2>Relatório do Aluno: {{ student.name }}</h2>
+        
+        <div class="student-info">
+            <p><strong>Nome:</strong> {{ student.name }}</p>
+            <p><strong>Série:</strong> {{ student.grade or 'N/A' }}</p>
+            <p><strong>Escola:</strong> {{ student.school or 'N/A' }}</p>
+            <p><strong>Responsável:</strong> {{ student.guardian.name if student.guardian else 'N/A' }}</p>
+            <p><strong>Período:</strong> {{ start_date.strftime('%d/%m/%Y') }} a {{ end_date.strftime('%d/%m/%Y') }}</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <h3>Total de Aulas</h3>
+                <div class="value">{{ lessons|length }}</div>
+            </div>
+            <div class="stat-box">
+                <h3>Total de Horas</h3>
+                <div class="value">{{ "%.1f"|format(total_hours) }}</div>
+            </div>
+            <div class="stat-box">
+                <h3>Matérias Estudadas</h3>
+                <div class="value">{{ subjects|length }}</div>
+            </div>
+        </div>
+        
+        <h2>Aulas do Mês</h2>
+        {% if lessons %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Horário</th>
+                    <th>Matéria</th>
+                    <th>Tópico</th>
+                    <th>Status</th>
+                    <th>Duração</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lesson in lessons %}
+                <tr>
+                    <td>{{ lesson.date.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ lesson.start_time.strftime('%H:%M') }} - {{ lesson.end_time.strftime('%H:%M') }}</td>
+                    <td>{{ lesson.subject }}</td>
+                    <td>{{ lesson.topic or '-' }}</td>
+                    <td>
+                        {% if lesson.status == 'completed' %}
+                        <span class="badge badge-success">Realizada</span>
+                        {% elif lesson.status == 'scheduled' %}
+                        <span class="badge badge-primary">Agendada</span>
+                        {% else %}
+                        <span class="badge badge-danger">Cancelada</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ "%.1f"|format(lesson.duration_hours) }}h</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Não há aulas registradas para este aluno no mês selecionado.</p>
+        {% endif %}
+        
+        <h2>Matérias Estudadas</h2>
+        {% if subjects %}
+        <div class="subjects-list">
+            {% for subject, count in subjects.items() %}
+            <div class="subject-item">
+                <h4>{{ subject }}</h4>
+                <p>{{ count }} aula(s)</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>Não há matérias registradas para este aluno no mês selecionado.</p>
+        {% endif %}
+        
+        <h2>Observações e Recomendações</h2>
+        <p>Este relatório apresenta um resumo das atividades acadêmicas do aluno durante o mês de {{ month_name }} de {{ year }}.</p>
+        <p>Para mais informações ou esclarecimentos, entre em contato com Caio pelo WhatsApp ou email.</p>
+    </div>
+    
+    <div id="footerContent" class="footer">
+        <p>Relatório gerado em {{ now().strftime('%d/%m/%Y %H:%M') }} | Aulas Particulares Caio</p>
+    </div>
+</body>
+</html>

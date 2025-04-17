@@ -54,19 +54,19 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Resumo do Aluno</h5>
+                <h5 class="mb-0">Dados do Aluno</h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
                         <p><strong>Nome:</strong> {{ student.name }}</p>
+                        <p><strong>Idade:</strong> {{ student.age or 'N/A' }}</p>
                         <p><strong>Série:</strong> {{ student.grade or 'N/A' }}</p>
-                        <p><strong>Escola:</strong> {{ student.school or 'N/A' }}</p>
                     </div>
                     <div class="col-md-6">
+                        <p><strong>Escola:</strong> {{ student.school or 'N/A' }}</p>
                         <p><strong>Responsável:</strong> {{ student.guardian.name if student.guardian else 'N/A' }}</p>
                         <p><strong>WhatsApp:</strong> {{ student.whatsapp or 'N/A' }}</p>
-                        <p><strong>Idade:</strong> {{ student.age or 'N/A' }}</p>
                     </div>
                 </div>
             </div>
@@ -102,12 +102,37 @@
     </div>
 </div>
 
-<!-- Aulas do Mês -->
+<!-- Matérias Estudadas -->
 <div class="row mb-4">
     <div class="col-12">
         <div class="card">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Aulas do Mês ({{ ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][month-1] }}/{{ year }})</h5>
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Matérias Estudadas</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for subject, count in subjects.items() %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ subject }}</h5>
+                                <p class="card-text">{{ count }} aula(s)</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Aulas do Mês -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Aulas do Mês</h5>
             </div>
             <div class="card-body">
                 {% if lessons %}
@@ -120,7 +145,9 @@
                                 <th>Matéria</th>
                                 <th>Tópico</th>
                                 <th>Status</th>
+                                <th>Tipo</th>
                                 <th>Duração</th>
+                                <th>Notas</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -139,43 +166,22 @@
                                     <span class="badge bg-danger">Cancelada</span>
                                     {% endif %}
                                 </td>
+                                <td>
+                                    {% if lesson.lesson_type == 'fixed' %}
+                                    <span class="badge bg-secondary">Fixa</span>
+                                    {% else %}
+                                    <span class="badge bg-info">Extra</span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ "%.1f"|format(lesson.duration_hours) }}h</td>
+                                <td>{{ lesson.notes|truncate(50) if lesson.notes else '-' }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
                 {% else %}
-                <p class="text-center text-muted my-5">Não há aulas registradas para este aluno no mês selecionado.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Matérias Estudadas -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0">Matérias Estudadas</h5>
-            </div>
-            <div class="card-body">
-                {% if subjects %}
-                <div class="row">
-                    {% for subject, count in subjects.items() %}
-                    <div class="col-md-4 mb-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">{{ subject }}</h5>
-                                <p class="text-muted mb-0">{{ count }} aula(s)</p>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-center text-muted my-3">Não há matérias registradas para este aluno no mês selecionado.</p>
+                <p class="text-center text-muted my-3">Não há aulas registradas para este aluno no mês selecionado.</p>
                 {% endif %}
             </div>
         </div>

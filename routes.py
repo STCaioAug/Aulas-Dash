@@ -953,3 +953,202 @@ def register_routes(app):
         )
         
         return response
+        
+    # Relatório por Responsável
+    @app.route('/guardian-report')
+    def guardian_report():
+        """Gera um relatório mensal por responsável"""
+        # Obter parâmetros de filtro
+        guardian_id = request.args.get('guardian_id')
+        month = request.args.get('month')
+        year = request.args.get('year')
+        
+        # Verificar se o responsável foi especificado
+        if not guardian_id:
+            flash('É necessário selecionar um responsável para gerar o relatório.', 'warning')
+            return redirect(url_for('list_guardians'))
+            
+        # Buscar responsável
+        guardian = Guardian.query.get_or_404(guardian_id)
+        
+        # Configurar mês/ano padrão (mês atual)
+        today = date.today()
+        if not month:
+            month = today.month
+        else:
+            month = int(month)
+            
+        if not year:
+            year = today.year
+        else:
+            year = int(year)
+            
+        # Calcular período do relatório
+        start_date = date(year, month, 1)
+        
+        # Calcular último dia do mês
+        if month == 12:
+            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+            
+        # Obter todos os alunos do responsável
+        students = set(guardian.primary_students + guardian.students)
+        
+        # Buscar aulas de todos os alunos no período
+        student_lessons = {}
+        total_lessons = 0
+        total_hours = 0
+        total_amount = 0
+        
+        for student in students:
+            lessons = Lesson.query.filter(
+                Lesson.student_id == student.id,
+                Lesson.date >= start_date,
+                Lesson.date <= end_date,
+                Lesson.status == 'completed'
+            ).order_by(Lesson.date, Lesson.start_time).all()
+            
+            student_hours = sum(lesson.duration_hours for lesson in lessons)
+            student_amount = sum(lesson.payment_amount for lesson in lessons)
+            
+            student_lessons[student] = {
+                'lessons': lessons,
+                'hours': student_hours,
+                'amount': student_amount
+            }
+            
+            total_lessons += len(lessons)
+            total_hours += student_hours
+            total_amount += student_amount
+            
+        # Buscar pagamentos do responsável no período
+        payments = Payment.query.filter(
+            Payment.guardian_id == guardian_id,
+            Payment.payment_date >= start_date,
+            Payment.payment_date <= end_date
+        ).order_by(Payment.payment_date).all()
+        
+        total_payments = sum(payment.amount for payment in payments)
+        
+        # Obter anos para o seletor (desde o primeiro registro até o ano atual)
+        first_payment = Payment.query.filter(Payment.guardian_id == guardian_id).order_by(Payment.payment_date).first()
+        
+        if first_payment:
+            first_year = first_payment.payment_date.year
+        else:
+            # Verificar primeira aula de qualquer aluno do responsável
+            student_ids = [student.id for student in students]
+            first_lesson = Lesson.query.filter(Lesson.student_id.in_(student_ids)).order_by(Lesson.date).first()
+            
+            if first_lesson:
+                first_year = first_lesson.date.year
+            else:
+                first_year = today.year
+                
+        years = list(range(first_year, today.year + 1))
+        
+        return render_template(
+            'guardian_report.html',
+            guardian=guardian,
+            student_lessons=student_lessons,
+            payments=payments,
+            total_lessons=total_lessons,
+            total_hours=total_hours,
+            total_amount=total_amount,
+            total_payments=total_payments,
+            month=month,
+            year=year,
+            years=years
+        )
+        
+    @app.route('/export-guardian-report-pdf/<int:guardian_id>/<int:month>/<int:year>')
+    def export_guardian_report_pdf(guardian_id, month, year):
+        """Exporta o relatório do responsável em PDF"""
+        # Buscar responsável
+        guardian = Guardian.query.get_or_404(guardian_id)
+        
+        # Calcular período do relatório
+        start_date = date(year, month, 1)
+        
+        # Calcular último dia do mês
+        if month == 12:
+            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+            
+        # Obter todos os alunos do responsável
+        students = set(guardian.primary_students + guardian.students)
+        
+        # Buscar aulas de todos os alunos no período
+        student_lessons = {}
+        total_lessons = 0
+        total_hours = 0
+        total_amount = 0
+        
+        for student in students:
+            lessons = Lesson.query.filter(
+                Lesson.student_id == student.id,
+                Lesson.date >= start_date,
+                Lesson.date <= end_date,
+                Lesson.status == 'completed'
+            ).order_by(Lesson.date, Lesson.start_time).all()
+            
+            student_hours = sum(lesson.duration_hours for lesson in lessons)
+            student_amount = sum(lesson.payment_amount for lesson in lessons)
+            
+            student_lessons[student] = {
+                'lessons': lessons,
+                'hours': student_hours,
+                'amount': student_amount
+            }
+            
+            total_lessons += len(lessons)
+            total_hours += student_hours
+            total_amount += student_amount
+            
+        # Buscar pagamentos do responsável no período
+        payments = Payment.query.filter(
+            Payment.guardian_id == guardian_id,
+            Payment.payment_date >= start_date,
+            Payment.payment_date <= end_date
+        ).order_by(Payment.payment_date).all()
+        
+        total_payments = sum(payment.amount for payment in payments)
+        
+        # Nome dos meses em português
+        meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+        
+        # Renderizar o template HTML para o PDF
+        html = render_template(
+            'pdf/guardian_report_pdf.html',
+            guardian=guardian,
+            student_lessons=student_lessons,
+            payments=payments,
+            total_lessons=total_lessons,
+            total_hours=total_hours,
+            total_amount=total_amount,
+            total_payments=total_payments,
+            month=month,
+            year=year,
+            month_name=meses[month-1],
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        # Criar PDF a partir do HTML
+        pdf_buffer = BytesIO()
+        pisa.CreatePDF(html, dest=pdf_buffer)
+        
+        # Preparar resposta
+        pdf_buffer.seek(0)
+        response = app.response_class(
+            pdf_buffer,
+            mimetype='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename=relatorio_responsavel_{guardian.name.replace(" ", "_")}_{meses[month-1]}_{year}.pdf'
+            }
+        )
+        
+        return response

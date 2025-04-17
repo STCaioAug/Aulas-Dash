@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Responsáveis - Aulas Particulares Caio{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Responsáveis</h1>
+    <a href="{{ url_for('new_guardian') }}" class="btn btn-primary">Novo Responsável</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if guardians %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Telefone</th>
+                        <th>WhatsApp</th>
+                        <th>Alunos</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for guardian in guardians %}
+                    <tr>
+                        <td>{{ guardian.name }}</td>
+                        <td>{{ guardian.email if guardian.email else '-' }}</td>
+                        <td>{{ guardian.phone if guardian.phone else '-' }}</td>
+                        <td>{{ guardian.whatsapp if guardian.whatsapp else '-' }}</td>
+                        <td>
+                            {% if guardian.primary_students %}
+                            <ul class="list-unstyled mb-0">
+                                {% for student in guardian.primary_students %}
+                                <li>{{ student.name }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('guardian_report', guardian_id=guardian.id) }}" class="btn btn-sm btn-outline-info">Relatório</a>
+                                <a href="{{ url_for('edit_guardian', id=guardian.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        data-bs-toggle="modal" data-bs-target="#deleteModal{{ guardian.id }}">
+                                    Excluir
+                                </button>
+                            </div>
+                            
+                            <!-- Modal de confirmação de exclusão -->
+                            <div class="modal fade" id="deleteModal{{ guardian.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ guardian.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteModalLabel{{ guardian.id }}">Confirmar Exclusão</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            Tem certeza que deseja excluir o responsável <strong>{{ guardian.name }}</strong>?
+                                            Esta ação não pode ser desfeita.
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <form action="{{ url_for('delete_guardian', id=guardian.id) }}" method="POST">
+                                                <button type="submit" class="btn btn-danger">Excluir</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted my-5">Nenhum responsável cadastrado. <a href="{{ url_for('new_guardian') }}">Adicionar um novo responsável</a>.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

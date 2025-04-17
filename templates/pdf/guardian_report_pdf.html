@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório do Responsável - {{ guardian.name }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 2cm;
+            @frame header {
+                -pdf-frame-content: headerContent;
+                top: 0.5cm;
+                margin-left: 1cm;
+                margin-right: 1cm;
+                height: 3cm;
+            }
+            @frame footer {
+                -pdf-frame-content: footerContent;
+                bottom: 0cm;
+                margin-left: 1cm;
+                margin-right: 1cm;
+                height: 1cm;
+            }
+        }
+        body {
+            font-family: sans-serif;
+            color: #333;
+            line-height: 1.5;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        h2 {
+            color: #3498db;
+            font-size: 18px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        h3 {
+            color: #2c3e50;
+            font-size: 16px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .period {
+            color: #7f8c8d;
+            font-size: 14px;
+            font-style: italic;
+        }
+        .info-box {
+            margin: 20px 0;
+            border: 1px solid #eee;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .info-box p {
+            margin: 5px 0;
+        }
+        .info-box strong {
+            display: inline-block;
+            width: 120px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        .stat-box {
+            width: 30%;
+            text-align: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            background-color: #f5f5f5;
+        }
+        .stat-box h3 {
+            margin: 0;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .stat-box .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2980b9;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th {
+            background-color: #2c3e50;
+            color: white;
+            text-align: left;
+            padding: 10px;
+        }
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 3px;
+            font-size: 12px;
+            color: white;
+        }
+        .badge-success {
+            background-color: #27ae60;
+        }
+        .badge-primary {
+            background-color: #3498db;
+        }
+        .badge-danger {
+            background-color: #e74c3c;
+        }
+        .summary-table {
+            width: 60%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        .summary-table th {
+            text-align: right;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            background-color: white;
+            color: #333;
+            font-weight: bold;
+            width: 60%;
+        }
+        .summary-table td {
+            text-align: right;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .summary-table tr:last-child {
+            border-top: 2px solid #333;
+            font-weight: bold;
+        }
+        .text-success {
+            color: #27ae60;
+        }
+        .text-danger {
+            color: #e74c3c;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #7f8c8d;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="headerContent" class="header">
+        <h1>Aulas Particulares Caio</h1>
+        <div class="period">Relatório Financeiro: {{ month_name }}/{{ year }}</div>
+    </div>
+    
+    <div class="content">
+        <h2>Relatório do Responsável: {{ guardian.name }}</h2>
+        
+        <div class="info-box">
+            <p><strong>Nome:</strong> {{ guardian.name }}</p>
+            <p><strong>Email:</strong> {{ guardian.email or 'N/A' }}</p>
+            <p><strong>Telefone:</strong> {{ guardian.phone or 'N/A' }}</p>
+            <p><strong>WhatsApp:</strong> {{ guardian.whatsapp or 'N/A' }}</p>
+            <p><strong>Período:</strong> {{ start_date.strftime('%d/%m/%Y') }} a {{ end_date.strftime('%d/%m/%Y') }}</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <h3>Total de Aulas</h3>
+                <div class="value">{{ total_lessons }}</div>
+            </div>
+            <div class="stat-box">
+                <h3>Total de Horas</h3>
+                <div class="value">{{ "%.1f"|format(total_hours) }}</div>
+            </div>
+            <div class="stat-box">
+                <h3>Valor Total</h3>
+                <div class="value">R$ {{ "%.2f"|format(total_amount) }}</div>
+            </div>
+        </div>
+        
+        {% for student, student_data in student_lessons.items() %}
+        <h3>Aluno: {{ student.name }}</h3>
+        <p>Total de aulas: {{ student_data['lessons']|length }} | Total de horas: {{ "%.1f"|format(student_data['hours']) }}h | Valor: R$ {{ "%.2f"|format(student_data['amount']) }}</p>
+        
+        {% if student_data['lessons'] %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Horário</th>
+                    <th>Matéria</th>
+                    <th>Duração</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lesson in student_data['lessons'] %}
+                <tr>
+                    <td>{{ lesson.date.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ lesson.start_time.strftime('%H:%M') }} - {{ lesson.end_time.strftime('%H:%M') }}</td>
+                    <td>{{ lesson.subject }}</td>
+                    <td>{{ "%.1f"|format(lesson.duration_hours) }}h</td>
+                    <td>R$ {{ "%.2f"|format(lesson.payment_amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Não há aulas registradas para este aluno no mês selecionado.</p>
+        {% endif %}
+        {% endfor %}
+        
+        <h2>Pagamentos</h2>
+        {% if payments %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Valor</th>
+                    <th>Método</th>
+                    <th>Descrição</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.payment_date.strftime('%d/%m/%Y') }}</td>
+                    <td>R$ {{ "%.2f"|format(payment.amount) }}</td>
+                    <td>{{ payment.payment_method or '-' }}</td>
+                    <td>{{ payment.description or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Não há pagamentos registrados para este responsável no mês selecionado.</p>
+        {% endif %}
+        
+        <h2>Resumo Financeiro</h2>
+        <table class="summary-table">
+            <tbody>
+                <tr>
+                    <th>Total de Aulas:</th>
+                    <td>{{ total_lessons }}</td>
+                </tr>
+                <tr>
+                    <th>Total de Horas:</th>
+                    <td>{{ "%.1f"|format(total_hours) }}h</td>
+                </tr>
+                <tr>
+                    <th>Valor Total:</th>
+                    <td>R$ {{ "%.2f"|format(total_amount) }}</td>
+                </tr>
+                <tr>
+                    <th>Pagamentos Realizados:</th>
+                    <td>R$ {{ "%.2f"|format(total_payments) }}</td>
+                </tr>
+                <tr>
+                    <th>Saldo:</th>
+                    <td>
+                        {% set balance = total_payments - total_amount %}
+                        {% if balance >= 0 %}
+                        <span class="text-success">R$ {{ "%.2f"|format(balance) }} (Crédito)</span>
+                        {% else %}
+                        <span class="text-danger">R$ {{ "%.2f"|format(-balance) }} (Débito)</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <p>Este relatório apresenta um resumo das atividades e finanças referentes ao mês de {{ month_name }} de {{ year }}. Para mais informações, entre em contato.</p>
+    </div>
+    
+    <div id="footerContent" class="footer">
+        <p>Relatório gerado em {{ start_date.strftime('%d/%m/%Y') }} | Aulas Particulares Caio</p>
+    </div>
+</body>
+</html>
