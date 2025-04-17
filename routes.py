@@ -370,60 +370,369 @@ def register_routes(app):
         flash('Lesson deleted successfully!', 'success')
         return redirect(url_for('list_lessons'))
 
-    # Reports
-    @app.route('/reports')
-    def reports():
-        # Get date range for filtering
-        start_date_str = request.args.get('start_date')
-        end_date_str = request.args.get('end_date')
+    # Banco de Dados
+    @app.route('/banco-dados')
+    def banco_dados():
+        """Página de banco de dados com todas as aulas registradas."""
+        # Obter todos os alunos com seus responsáveis
+        students = Student.query.all()
         
-        today = date.today()
-        if not start_date_str:
-            # Default to first day of current month
+        # Obter período (semanal ou mensal)
+        view_type = request.args.get('view_type', 'weekly')
+        
+        # Definir período de busca com base no tipo de visualização
+        today = datetime.now().date()
+        if view_type == 'weekly':
+            # Definir o início da semana (segunda-feira)
+            start_date = today - timedelta(days=today.weekday())
+            end_date = start_date + timedelta(days=6)
+            period_title = f"Semana de {start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}"
+        else:  # mensal
             start_date = date(today.year, today.month, 1)
-        else:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            
-        if not end_date_str:
-            # Default to last day of current month
+            # Último dia do mês atual
             if today.month == 12:
                 end_date = date(today.year + 1, 1, 1) - timedelta(days=1)
             else:
                 end_date = date(today.year, today.month + 1, 1) - timedelta(days=1)
-        else:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            period_title = f"Mês de {start_date.strftime('%B/%Y')}"
         
-        # Get all lessons in the date range
+        # Obter todas as aulas do período
         lessons = Lesson.query.filter(
             Lesson.date >= start_date,
             Lesson.date <= end_date
-        ).order_by(Lesson.date).all()
+        ).order_by(Lesson.date, Lesson.start_time).all()
         
-        # Get all payments in the date range
-        payments = Payment.query.filter(
-            Payment.payment_date >= start_date,
-            Payment.payment_date <= end_date
-        ).order_by(Payment.payment_date).all()
-        
-        # Calculate statistics
-        total_lessons = len(lessons)
-        total_lesson_hours = sum((lesson.end_time.hour - lesson.start_time.hour) + 
-                              (lesson.end_time.minute - lesson.start_time.minute) / 60 
-                              for lesson in lessons)
-        total_earnings = sum(lesson.payment_amount for lesson in lessons)
-        total_payments = sum(payment.amount for payment in payments)
+        # Calcular valores recebidos
+        total_paid = sum(lesson.payment_amount for lesson in lessons if lesson.payment_status == 'paid')
+        total_unpaid = sum(lesson.payment_amount for lesson in lessons if lesson.payment_status == 'unpaid')
         
         return render_template(
-            'reports.html',
-            start_date=start_date,
-            end_date=end_date,
+            'banco_dados.html',
+            students=students,
             lessons=lessons,
-            payments=payments,
-            total_lessons=total_lessons,
-            total_lesson_hours=total_lesson_hours,
-            total_earnings=total_earnings,
-            total_payments=total_payments
+            view_type=view_type,
+            period_title=period_title,
+            total_paid=total_paid,
+            total_unpaid=total_unpaid
         )
+    
+    # Gestão de Tempo
+    @app.route('/gestao-financeira')
+    def gestao_financeira():
+        """Página de gestão financeira com gráficos de ganhos."""
+        # Obter parâmetros de filtro
+        month = request.args.get('month')
+        year = request.args.get('year')
+        
+        # Configurar mês/ano padrão (mês atual)
+        today = date.today()
+        if not month:
+            month = today.month
+        else:
+            month = int(month)
+            
+        if not year:
+            year = today.year
+        else:
+            year = int(year)
+            
+        # Calcular período do relatório
+        start_date = date(year, month, 1)
+        
+        # Calcular último dia do mês
+        if month == 12:
+            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+            
+        # Buscar aulas no período
+        lessons = Lesson.query.filter(
+            Lesson.date >= start_date,
+            Lesson.date <= end_date
+        ).all()
+        
+        # Calcular valores financeiros
+        total_value = sum(lesson.payment_amount for lesson in lessons)
+        paid_value = sum(lesson.payment_amount for lesson in lessons if lesson.payment_status == 'paid')
+        unpaid_value = total_value - paid_value
+        
+        # Dados para o gráfico de ganhos diários
+        daily_values = {}
+        for d in range((end_date - start_date).days + 1):
+            current_date = start_date + timedelta(days=d)
+            daily_values[current_date] = 0
+            
+        # Preencher valores diários
+        for lesson in lessons:
+            if lesson.date in daily_values:
+                daily_values[lesson.date] += lesson.payment_amount
+                
+        # Criar gráfico de ganhos diários
+        daily_dates = list(daily_values.keys())
+        daily_amounts = list(daily_values.values())
+        
+        daily_fig = go.Figure()
+        daily_fig.add_trace(go.Bar(
+            x=[d.strftime('%d/%m') for d in daily_dates],
+            y=daily_amounts,
+            marker_color='rgba(55, 83, 109, 0.7)'
+        ))
+        
+        daily_fig.update_layout(
+            title='Ganhos Diários',
+            xaxis=dict(title='Data'),
+            yaxis=dict(title='Valor (R$)'),
+            template='plotly_dark'
+        )
+        
+        # Dados para o gráfico de Pareto por aluno
+        student_values = {}
+        for lesson in lessons:
+            student_name = lesson.student.name
+            if student_name not in student_values:
+                student_values[student_name] = 0
+            student_values[student_name] += lesson.payment_amount
+            
+        # Ordenar por valor (decrescente)
+        sorted_students = sorted(student_values.keys(), key=lambda x: student_values[x], reverse=True)
+        
+        if sorted_students:
+            # Calcular valores acumulados
+            total_student_value = sum(student_values.values())
+            student_data = []
+            cumulative_percentage = 0
+            
+            for student in sorted_students:
+                value = student_values[student]
+                percentage = (value / total_student_value) * 100
+                cumulative_percentage += percentage
+                
+                student_data.append({
+                    'name': student,
+                    'value': value,
+                    'percentage': percentage,
+                    'cumulative': cumulative_percentage
+                })
+            
+            # Criar gráfico de Pareto
+            student_names = [item['name'] for item in student_data]
+            student_values_list = [item['value'] for item in student_data]
+            cumulative = [item['cumulative'] for item in student_data]
+            
+            pareto_fig = go.Figure()
+            
+            pareto_fig.add_trace(go.Bar(
+                x=student_names,
+                y=student_values_list,
+                name='Valor (R$)',
+                marker_color='rgba(55, 83, 109, 0.7)'
+            ))
+            
+            pareto_fig.add_trace(go.Scatter(
+                x=student_names,
+                y=cumulative,
+                name='% Acumulada',
+                yaxis='y2',
+                marker_color='rgb(26, 118, 255)',
+                mode='lines+markers'
+            ))
+            
+            pareto_fig.update_layout(
+                title='Análise de Ganhos por Aluno',
+                xaxis=dict(title='Aluno'),
+                yaxis=dict(title='Valor (R$)'),
+                yaxis2=dict(
+                    title='Porcentagem Acumulada',
+                    titlefont=dict(color='rgb(26, 118, 255)'),
+                    tickfont=dict(color='rgb(26, 118, 255)'),
+                    overlaying='y',
+                    side='right',
+                    range=[0, 100]
+                ),
+                legend=dict(x=0.01, y=0.99),
+                template='plotly_dark'
+            )
+        else:
+            pareto_fig = go.Figure()
+            pareto_fig.update_layout(
+                title='Sem dados de alunos para o período selecionado',
+                template='plotly_dark'
+            )
+            
+        # Dados para o gráfico de frequência
+        student_frequency = {}
+        for lesson in lessons:
+            student_name = lesson.student.name
+            if student_name not in student_frequency:
+                student_frequency[student_name] = 0
+            student_frequency[student_name] += 1
+            
+        # Ordenar por frequência (decrescente)
+        sorted_freq_students = sorted(student_frequency.keys(), key=lambda x: student_frequency[x], reverse=True)
+        
+        if sorted_freq_students:
+            freq_fig = go.Figure()
+            
+            freq_fig.add_trace(go.Bar(
+                x=sorted_freq_students,
+                y=[student_frequency[student] for student in sorted_freq_students],
+                marker_color='rgba(0, 200, 200, 0.7)'
+            ))
+            
+            freq_fig.update_layout(
+                title='Frequência de Aulas por Aluno',
+                xaxis=dict(title='Aluno'),
+                yaxis=dict(title='Número de Aulas'),
+                template='plotly_dark'
+            )
+        else:
+            freq_fig = go.Figure()
+            freq_fig.update_layout(
+                title='Sem dados de frequência para o período selecionado',
+                template='plotly_dark'
+            )
+            
+        # Preparar os gráficos para renderização
+        daily_graph = json.loads(json.dumps(daily_fig, cls=PlotlyJSONEncoder))
+        pareto_graph = json.loads(json.dumps(pareto_fig, cls=PlotlyJSONEncoder))
+        freq_graph = json.loads(json.dumps(freq_fig, cls=PlotlyJSONEncoder))
+        
+        # Identificar os top 3 alunos por frequência
+        top_students = []
+        for student in sorted_freq_students[:3]:
+            top_students.append((student, student_frequency[student]))
+            
+        return render_template(
+            'gestao_financeira.html',
+            month=month,
+            year=year,
+            total_value=total_value,
+            paid_value=paid_value,
+            unpaid_value=unpaid_value,
+            daily_graph=daily_graph,
+            pareto_graph=pareto_graph,
+            freq_graph=freq_graph,
+            top_students=top_students
+        )
+
+    @app.route('/gestao-tempo')
+    def gestao_tempo():
+        """Página de gestão de tempo com gráficos por dia da semana."""
+        # Criar gráfico de horas disponíveis por dia da semana
+        
+        # Calcular horas ocupadas por dia da semana
+        dias_semana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
+        # Mapeamento de dia da semana para índice
+        weekday_map = {0: 'Segunda', 1: 'Terça', 2: 'Quarta', 3: 'Quinta', 4: 'Sexta', 5: 'Sábado', 6: 'Domingo'}
+        
+        # Obter todas as aulas fixas
+        fixed_lessons = Lesson.query.filter_by(lesson_type='fixed').all()
+        
+        # Calcular horas por dia da semana
+        horas_ocupadas = {dia: 0 for dia in dias_semana}
+        
+        for lesson in fixed_lessons:
+            if lesson.date and lesson.start_time and lesson.end_time:
+                # Obter dia da semana
+                weekday = lesson.date.weekday()
+                dia = weekday_map[weekday]
+                
+                # Calcular duração em horas
+                start_datetime = datetime.combine(lesson.date, lesson.start_time)
+                end_datetime = datetime.combine(lesson.date, lesson.end_time)
+                duracao = (end_datetime - start_datetime).total_seconds() / 3600
+                
+                # Adicionar ao total do dia
+                horas_ocupadas[dia] += duracao
+        
+        # Criar gráfico com Plotly
+        fig = px.bar(
+            x=list(horas_ocupadas.keys()),
+            y=list(horas_ocupadas.values()),
+            labels={'x': 'Dia da Semana', 'y': 'Horas Ocupadas'},
+            title='Horas Ocupadas por Dia da Semana',
+            color=list(horas_ocupadas.values()),
+            color_continuous_scale='Viridis'
+        )
+        
+        # Adicionar linha horizontal com média
+        media_horas = sum(horas_ocupadas.values()) / len(horas_ocupadas)
+        fig.add_shape(
+            type="line",
+            x0=-0.5,
+            y0=media_horas,
+            x1=6.5,
+            y1=media_horas,
+            line=dict(color="red", width=2, dash="dash"),
+        )
+        
+        # Anotação da média
+        fig.add_annotation(
+            x=6,
+            y=media_horas,
+            text=f"Média: {media_horas:.1f}h",
+            showarrow=False,
+            yshift=10,
+            bgcolor="rgba(255, 255, 255, 0.8)"
+        )
+        
+        # Configurar layout
+        fig.update_layout(
+            template='plotly_dark',
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white'),
+            coloraxis_showscale=False
+        )
+        
+        # Convertendo para JSON
+        graph_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+        
+        # Definir horas disponíveis por dia
+        horas_disponiveis = {
+            'Segunda': 8,
+            'Terça': 8,
+            'Quarta': 8,
+            'Quinta': 8,
+            'Sexta': 8,
+            'Sábado': 4,
+            'Domingo': 0
+        }
+        
+        # Calcular horas livres
+        horas_livres = {dia: max(0, horas_disponiveis.get(dia, 0) - horas_ocupadas.get(dia, 0)) for dia in dias_semana}
+        
+        # Criar gráfico de horas livres
+        fig_livres = px.bar(
+            x=list(horas_livres.keys()),
+            y=list(horas_livres.values()),
+            labels={'x': 'Dia da Semana', 'y': 'Horas Disponíveis'},
+            title='Horas Disponíveis por Dia da Semana',
+            color=list(horas_livres.values()),
+            color_continuous_scale='Viridis'
+        )
+        
+        # Configurar layout
+        fig_livres.update_layout(
+            template='plotly_dark',
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white'),
+            coloraxis_showscale=False
+        )
+        
+        # Convertendo para JSON
+        graph_livres_json = json.dumps(fig_livres, cls=plotly.utils.PlotlyJSONEncoder)
+        
+        return render_template(
+            'gestao_tempo.html',
+            ocupadas_graph=graph_json,
+            livres_graph=graph_livres_json,
+            horas_ocupadas=horas_ocupadas,
+            horas_livres=horas_livres
+        )
+    
+    # A seção duplicada foi removida
 
     # API Endpoints
     @app.route('/api/students')
@@ -668,6 +977,20 @@ def register_routes(app):
         except Exception as e:
             flash(f'Erro ao registrar aula: {str(e)}', 'danger')
             return redirect(url_for('daily_lessons'))
+    
+    @app.route('/lessons/<int:id>/update-payment', methods=['POST'])
+    def update_lesson_payment(id):
+        """Atualiza o status de pagamento de uma aula."""
+        lesson = Lesson.query.get_or_404(id)
+        
+        data = request.get_json()
+        payment_status = data.get('payment_status', 'unpaid')
+        
+        # Atualizar status de pagamento
+        lesson.payment_status = payment_status
+        
+        db.session.commit()
+        return jsonify({'success': True})
             
     # Análise de Pareto
     @app.route('/pareto-chart')

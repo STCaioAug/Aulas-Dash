@@ -36,10 +36,11 @@
         </div>
     </div>
     <div class="col-md-3 mb-3">
-        <div class="card bg-warning text-white">
+        <div class="card bg-warning text-dark">
             <div class="card-body">
                 <h5 class="card-title">Pagamentos (Mês)</h5>
                 <h2 class="display-4">R$ {{ total_payments }}</h2>
+                <a href="{{ url_for('gestao_financeira') }}" class="stretched-link"></a>
             </div>
         </div>
     </div>
@@ -59,9 +60,40 @@
     <div class="col-md-4 mb-3">
         <div class="card">
             <div class="card-body text-center">
+                <h5 class="card-title">Banco de Dados</h5>
+                <p class="text-muted">Visualize todas as aulas registradas e gerencie status de pagamento</p>
+                <a href="{{ url_for('banco_dados') }}" class="btn btn-success">Acessar</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Gestão Financeira</h5>
+                <p class="text-muted">Analise ganhos e desempenho financeiro com gráficos detalhados</p>
+                <a href="{{ url_for('gestao_financeira') }}" class="btn btn-warning">Acessar</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Análises Avançadas -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Gestão de Tempo</h5>
+                <p class="text-muted">Analise a distribuição do seu tempo durante a semana</p>
+                <a href="{{ url_for('gestao_tempo') }}" class="btn btn-info">Acessar</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
                 <h5 class="card-title">Análise de Pareto</h5>
                 <p class="text-muted">Visualize as matérias mais estudadas em um gráfico de Pareto</p>
-                <a href="{{ url_for('pareto_chart') }}" class="btn btn-success">Ver Gráfico</a>
+                <a href="{{ url_for('pareto_chart') }}" class="btn btn-primary">Ver Gráfico</a>
             </div>
         </div>
     </div>
@@ -70,7 +102,7 @@
             <div class="card-body text-center">
                 <h5 class="card-title">Relatórios por Aluno</h5>
                 <p class="text-muted">Gere relatórios mensais por aluno com exportação em PDF</p>
-                <a href="{{ url_for('reports') }}" class="btn btn-info">Relatórios</a>
+                <a href="{{ url_for('student_report') }}" class="btn btn-secondary">Relatórios</a>
             </div>
         </div>
     </div>

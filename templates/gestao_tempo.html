@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestão de Tempo - Aulas Particulares Caio{% endblock %}
+
+{% block head %}
+<style>
+    .card {
+        margin-bottom: 20px;
+    }
+    .time-stats {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    .time-stat-card {
+        flex: 1;
+        min-width: 150px;
+        margin: 5px;
+        padding: 10px;
+        border-radius: 10px;
+        text-align: center;
+    }
+    .time-stat-card h4 {
+        margin-bottom: 5px;
+    }
+    .time-stat-card p {
+        font-size: 1.5rem;
+        margin: 0;
+    }
+    .dashboard-chart {
+        height: 400px;
+        width: 100%;
+    }
+    @media (max-width: 768px) {
+        .time-stat-card {
+            min-width: 120px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestão de Tempo</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Disponibilidade Semanal</h5>
+            </div>
+            <div class="card-body">
+                <div class="time-stats mb-4">
+                    {% for dia, horas in horas_ocupadas.items() %}
+                    <div class="time-stat-card bg-dark text-white">
+                        <h4>{{ dia }}</h4>
+                        <p>{{ "%.1f"|format(horas) }}h</p>
+                        <small>Ocupadas</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="time-stats mb-4">
+                    {% for dia, horas in horas_livres.items() %}
+                    <div class="time-stat-card bg-info text-white">
+                        <h4>{{ dia }}</h4>
+                        <p>{{ "%.1f"|format(horas) }}h</p>
+                        <small>Disponíveis</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Horas Ocupadas por Dia da Semana</h5>
+            </div>
+            <div class="card-body">
+                <div class="dashboard-chart" id="ocupadas-chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Horas Disponíveis por Dia da Semana</h5>
+            </div>
+            <div class="card-body">
+                <div class="dashboard-chart" id="livres-chart"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Dicas de Otimização</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-clock"></i> Melhor Horário para Novas Aulas</h5>
+                                <p class="card-text">
+                                    Com base na sua disponibilidade, os melhores dias para agendar novas aulas são:
+                                </p>
+                                <ul>
+                                    {% set sorted_available = horas_livres.items()|list|sort(reverse=True, key=lambda x: x[1]) %}
+                                    {% for dia, horas in sorted_available[:3] %}
+                                        {% if horas > 0 %}
+                                        <li><strong>{{ dia }}</strong>: {{ "%.1f"|format(horas) }} horas disponíveis</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-balance-scale"></i> Equilíbrio Semanal</h5>
+                                <p class="card-text">
+                                    Dias com maior carga de trabalho:
+                                </p>
+                                <ul>
+                                    {% set sorted_occupied = horas_ocupadas.items()|list|sort(reverse=True, key=lambda x: x[1]) %}
+                                    {% for dia, horas in sorted_occupied[:3] %}
+                                        {% if horas > 0 %}
+                                        <li><strong>{{ dia }}</strong>: {{ "%.1f"|format(horas) }} horas ocupadas</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                                <p class="card-text mt-2">
+                                    Considere redistribuir algumas aulas para dias menos ocupados ou bloquear novos agendamentos nesses dias.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-battery-full"></i> Prevenção de Sobrecarga</h5>
+                                <p class="card-text">
+                                    Você tem uma média de 
+                                    <strong>{{ "%.1f"|format(horas_ocupadas.values()|sum / 7) }} horas</strong> 
+                                    de aulas por dia.
+                                </p>
+                                <p class="card-text">
+                                    Para evitar sobrecarga, mantenha pelo menos 2 horas livres por dia para descanso e planejamento entre aulas.
+                                </p>
+                                <p class="card-text">
+                                    <strong>Tempo Total de Aulas:</strong> {{ "%.1f"|format(horas_ocupadas.values()|sum) }} horas por semana
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    // Render gráfico de horas ocupadas
+    const ocupadasData = {{ ocupadas_graph|safe }};
+    Plotly.newPlot('ocupadas-chart', ocupadasData.data, ocupadasData.layout, {responsive: true});
+    
+    // Render gráfico de horas livres
+    const livresData = {{ livres_graph|safe }};
+    Plotly.newPlot('livres-chart', livresData.data, livresData.layout, {responsive: true});
+    
+    // Ajustar gráficos ao redimensionar a janela
+    window.addEventListener('resize', function() {
+        Plotly.Plots.resize('ocupadas-chart');
+        Plotly.Plots.resize('livres-chart');
+    });
+</script>
+{% endblock %}
