@@ -616,6 +616,69 @@ def register_routes(app):
         )
 
     @app.route('/gestao-tempo')
+def gestao_tempo():
+    # Supondo que você já tenha essas variáveis calculadas:
+    horas_ocupadas = {
+        "Segunda": 3.5,
+        "Terça": 4.0,
+        "Quarta": 2.5,
+        "Quinta": 3.0,
+        "Sexta": 4.5,
+        "Sábado": 2.0,
+        "Domingo": 0.0
+    }
+
+    horas_livres = {
+        "Segunda": 2.5,
+        "Terça": 2.0,
+        "Quarta": 4.5,
+        "Quinta": 3.0,
+        "Sexta": 1.5,
+        "Sábado": 5.0,
+        "Domingo": 6.0
+    }
+
+    sorted_available = sorted(horas_livres.items(), key=lambda x: x[1], reverse=True)
+    sorted_occupied = sorted(horas_ocupadas.items(), key=lambda x: x[1], reverse=True)
+
+    # Dados para os gráficos (exemplo com Plotly)
+    ocupadas_graph = {
+        "data": [{
+            "type": "bar",
+            "x": list(horas_ocupadas.keys()),
+            "y": list(horas_ocupadas.values()),
+            "marker": {"color": "red"},
+            "name": "Ocupadas"
+        }],
+        "layout": {
+            "title": "Horas Ocupadas por Dia",
+            "margin": {"t": 30}
+        }
+    }
+
+    livres_graph = {
+        "data": [{
+            "type": "bar",
+            "x": list(horas_livres.keys()),
+            "y": list(horas_livres.values()),
+            "marker": {"color": "green"},
+            "name": "Disponíveis"
+        }],
+        "layout": {
+            "title": "Horas Disponíveis por Dia",
+            "margin": {"t": 30}
+        }
+    }
+
+    return render_template(
+        "gestao_tempo.html",
+        horas_ocupadas=horas_ocupadas,
+        horas_livres=horas_livres,
+        sorted_available=sorted_available,
+        sorted_occupied=sorted_occupied,
+        ocupadas_graph=ocupadas_graph,
+        livres_graph=livres_graph
+    )
     def gestao_tempo():
         """Página de gestão de tempo com gráficos por dia da semana."""
         # Criar gráfico de horas disponíveis por dia da semana
