@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Dados de Agendamento - Aulas Particulares Caio{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Importar Dados de Agendamento</h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Voltar para Dashboard</a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Importação de Dados</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('run_import_script') }}" method="POST">
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle"></i> Sobre a Importação</h5>
+                        <p>Esta ferramenta permite importar os seguintes tipos de dados para o sistema:</p>
+                        <ul>
+                            <li>Aulas fixas de 2025</li>
+                            <li>Aulas extras agendadas</li>
+                            <li>Feriados e dias bloqueados</li>
+                            <li>Observações gerais e sugestões de realocação</li>
+                        </ul>
+                        <p>Os dados serão inseridos conforme especificado no script de importação.</p>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Atenção!</h5>
+                        <p>A importação de aulas fixas substituirá todas as aulas fixas existentes para o período especificado.</p>
+                        <p>Certifique-se de fazer um backup dos dados antes de prosseguir, se necessário.</p>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="confirmCheck" name="confirm" required>
+                        <label class="form-check-label" for="confirmCheck">
+                            Entendo que esta ação pode modificar dados existentes e confirmo que desejo prosseguir.
+                        </label>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary" id="importBtn" disabled>
+                            <i class="fas fa-file-import"></i> Iniciar Importação
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Instruções</h5>
+            </div>
+            <div class="card-body">
+                <h6 class="card-subtitle mb-3 text-muted">Como funciona?</h6>
+                <p>O processo de importação segue estas etapas:</p>
+                <ol>
+                    <li>Limpa as aulas fixas existentes para 2025</li>
+                    <li>Insere novas aulas fixas conforme configurado</li>
+                    <li>Adiciona aulas extras agendadas</li>
+                    <li>Registra feriados e cancela aulas nessas datas</li>
+                    <li>Adiciona observações de alunos e provas</li>
+                </ol>
+                
+                <h6 class="card-subtitle mb-3 text-muted mt-4">Após a importação</h6>
+                <p>Você poderá:</p>
+                <ul>
+                    <li>Visualizar aulas importadas no calendário</li>
+                    <li>Editar ou cancelar aulas individualmente</li>
+                    <li>Verificar as observações adicionadas a cada aluno</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Habilitar botão de importação apenas quando o checkbox for marcado
+    document.getElementById('confirmCheck').addEventListener('change', function() {
+        document.getElementById('importBtn').disabled = !this.checked;
+    });
+</script>
+{% endblock %}

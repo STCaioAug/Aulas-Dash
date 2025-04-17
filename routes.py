@@ -1166,3 +1166,119 @@ def register_routes(app):
         )
         
         return response
+    
+    # Holidays routes
+    @app.route('/holidays')
+    def list_holidays():
+        """Lista todos os feriados e dias bloqueados."""
+        # Ordenar por data
+        holidays = Holiday.query.order_by(Holiday.date).all()
+        return render_template('holidays.html', holidays=holidays)
+    
+    @app.route('/holidays/new', methods=['GET', 'POST'])
+    def new_holiday():
+        """Adiciona um novo feriado ou dia bloqueado."""
+        if request.method == 'POST':
+            try:
+                holiday_date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
+                
+                # Verificar se já existe um feriado nesta data
+                existing_holiday = Holiday.query.filter_by(date=holiday_date).first()
+                if existing_holiday:
+                    flash(f'Já existe um feriado registrado para {holiday_date.strftime("%d/%m/%Y")}.', 'warning')
+                    return redirect(url_for('list_holidays'))
+                
+                # Criar novo feriado
+                holiday = Holiday(
+                    date=holiday_date,
+                    description=request.form.get('description'),
+                    notes=request.form.get('notes')
+                )
+                
+                # Cancelar aulas agendadas neste dia
+                lessons = Lesson.query.filter(Lesson.date == holiday_date).all()
+                for lesson in lessons:
+                    lesson.status = 'cancelled'
+                    lesson.notes = f"{lesson.notes or ''}\nCancelada - {holiday.description}".strip()
+                
+                db.session.add(holiday)
+                db.session.commit()
+                
+                flash('Feriado adicionado com sucesso!', 'success')
+                return redirect(url_for('list_holidays'))
+            except Exception as e:
+                flash(f'Erro ao adicionar feriado: {str(e)}', 'danger')
+        
+        return render_template('forms/holiday_form.html')
+    
+    @app.route('/holidays/<int:id>/edit', methods=['GET', 'POST'])
+    def edit_holiday(id):
+        """Edita um feriado existente."""
+        holiday = Holiday.query.get_or_404(id)
+        
+        if request.method == 'POST':
+            try:
+                holiday_date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
+                
+                # Verificar se já existe outro feriado nesta data
+                if holiday_date != holiday.date:
+                    existing_holiday = Holiday.query.filter_by(date=holiday_date).first()
+                    if existing_holiday and existing_holiday.id != holiday.id:
+                        flash(f'Já existe um feriado registrado para {holiday_date.strftime("%d/%m/%Y")}.', 'warning')
+                        return render_template('forms/holiday_form.html', holiday=holiday)
+                
+                # Atualizar feriado
+                holiday.date = holiday_date
+                holiday.description = request.form.get('description')
+                holiday.notes = request.form.get('notes')
+                
+                db.session.commit()
+                
+                flash('Feriado atualizado com sucesso!', 'success')
+                return redirect(url_for('list_holidays'))
+            except Exception as e:
+                flash(f'Erro ao atualizar feriado: {str(e)}', 'danger')
+        
+        return render_template('forms/holiday_form.html', holiday=holiday)
+    
+    @app.route('/holidays/<int:id>/delete', methods=['POST'])
+    def delete_holiday(id):
+        """Remove um feriado."""
+        holiday = Holiday.query.get_or_404(id)
+        
+        db.session.delete(holiday)
+        db.session.commit()
+        
+        flash('Feriado removido com sucesso!', 'success')
+        return redirect(url_for('list_holidays'))
+    
+    @app.route('/import-schedule-data')
+    def import_schedule_data_view():
+        """Página para importar dados de agendamento."""
+        return render_template('import_schedule_data.html')
+        
+    @app.route('/run-import-script', methods=['POST'])
+    def run_import_script():
+        """Executa o script de importação de dados."""
+        if request.method == 'POST':
+            # Verificar se o usuário confirmou a importação
+            if 'confirm' in request.form:
+                try:
+                    # Importar o script manualmente para controlar a execução
+                    import sys
+                    import os
+                    script_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts')
+                    sys.path.insert(0, script_dir)
+                    
+                    import import_schedule_data
+                    
+                    # Executar a função principal do script
+                    import_schedule_data.main()
+                    
+                    flash('Importação de dados concluída com sucesso!', 'success')
+                except Exception as e:
+                    flash(f'Erro durante a importação: {str(e)}', 'danger')
+            else:
+                flash('É necessário confirmar a importação para prosseguir.', 'warning')
+        
+        return redirect(url_for('import_schedule_data_view'))
