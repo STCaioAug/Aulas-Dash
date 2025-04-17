@@ -59,6 +59,53 @@ def parse_date(date_str):
         print(f"Erro ao converter data: {date_str}")
         return None
 
+def get_price_for_student(name, duration):
+    """Obtém o valor da aula com base na tabela de preços fornecida."""
+    # Mapeamento de nomes para valores com base na tabela fornecida
+    price_table = {
+        # Duração 1 hora
+        "1H": {
+            "Maria": 60.00,
+            "João": 60.00,
+            "Pedro": 50.00,
+            "Lourenço": 50.00,
+            "Gabi": 50.00,
+            "Otávio": 50.00,
+            "Pietro": 50.00,
+            "Carol": 50.00,
+            "Gui": 50.00,
+            "Pedrão": 50.00,
+            "Antônio": 60.00,
+            "Fê": 60.00,
+            "João Paulo": 60.00,  # Assumindo o mesmo valor para aulas de inglês
+        },
+        # Duração 1.5 horas
+        "1.5H": {
+            "Maria": 80.00,
+            "João": 80.00,
+            "Pedro": 70.00,
+            "Lourenço": 70.00,
+            "Gabi": 70.00,
+            "Otávio": 70.00,
+            "Pietro": 70.00,
+            "Carol": 70.00,
+            "Gui": 70.00,
+            "Pedrão": 70.00,
+            "Antônio": 80.00,
+            "Fê": 80.00,
+            "João Paulo": 80.00,  # Assumindo o mesmo valor para aulas de inglês
+        }
+    }
+    
+    # Determinar a chave de duração
+    duration_key = "1.5H" if duration >= 1.5 else "1H"
+    
+    # Buscar o primeiro nome para simplificar a busca
+    first_name = name.split()[0]
+    
+    # Retornar o valor correspondente ou um valor padrão
+    return price_table.get(duration_key, {}).get(first_name, 50.00)
+
 def find_or_create_student(name):
     """Busca um aluno pelo nome ou cria novo se não existir."""
     # Extrai o primeiro nome para busca
@@ -170,8 +217,8 @@ def import_fixed_lessons():
     ).delete()
     db.session.commit()
     
-    # Gerar todas as datas de 2025
-    current_date = date(2025, 1, 1)
+    # Gerar datas a partir de 01/03/2025
+    current_date = date(2025, 3, 1)
     end_of_year = date(2025, 12, 31)
     
     lessons_added = 0
@@ -226,6 +273,19 @@ def import_fixed_lessons():
                     if not subject:
                         subject = "Matéria Escolar"
                     
+                    # Calcular duração da aula em horas
+                    duration_hours = 1.0
+                    if start_time and end_time:
+                        hours_diff = end_time.hour - start_time.hour
+                        mins_diff = end_time.minute - start_time.minute
+                        if mins_diff < 0:
+                            hours_diff -= 1
+                            mins_diff += 60
+                        duration_hours = hours_diff + (mins_diff / 60)
+                    
+                    # Obter valor da aula com base na duração
+                    payment_amount = get_price_for_student(name, duration_hours)
+                    
                     # Criar nova aula
                     new_lesson = Lesson(
                         student_id=student.id,
@@ -235,6 +295,8 @@ def import_fixed_lessons():
                         subject=subject,
                         status='scheduled',
                         lesson_type='fixed',
+                        payment_status='unpaid',
+                        payment_amount=payment_amount,
                         notes=f"Aula fixa de {weekday_name}. {f'Local: {location}' if location else ''} {f'Responsável: {guardian_name}' if guardian_name else ''}"
                     )
                     
@@ -352,6 +414,19 @@ def import_extra_lessons():
             ).first()
             
             if not existing_lesson:
+                # Calcular duração da aula em horas
+                duration_hours = 1.0
+                if start_time and end_time:
+                    hours_diff = end_time.hour - start_time.hour
+                    mins_diff = end_time.minute - start_time.minute
+                    if mins_diff < 0:
+                        hours_diff -= 1
+                        mins_diff += 60
+                    duration_hours = hours_diff + (mins_diff / 60)
+                
+                # Obter valor da aula com base na duração
+                payment_amount = get_price_for_student(student_name, duration_hours)
+                
                 new_lesson = Lesson(
                     student_id=student.id,
                     date=lesson_date,
@@ -360,6 +435,8 @@ def import_extra_lessons():
                     subject=subject,
                     status=status,
                     lesson_type='extra',
+                    payment_status='unpaid',
+                    payment_amount=payment_amount,
                     notes=notes.strip()
                 )
                 
@@ -484,12 +561,17 @@ def import_observations():
                             lesson.notes = f"{lesson.notes or ''}\nPROVA NESTE DIA: {exam_info.strip()}".strip()
                     else:
                         # Criar um evento de prova
+                        # Assumindo duração de 1.5h para aulas de revisão de prova
+                        payment_amount = get_price_for_student(student_name, 1.5)
+                        
                         new_lesson = Lesson(
                             student_id=student.id,
                             date=exam_date,
                             subject="Prova",
                             status='scheduled',
                             lesson_type='extra',
+                            payment_status='unpaid',
+                            payment_amount=payment_amount,
                             notes=f"PROVA: {exam_info.strip()}"
                         )
                         db.session.add(new_lesson)
